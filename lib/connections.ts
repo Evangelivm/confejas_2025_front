@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:3000"; // Reemplaza con la URL de tu backend
+const BASE_URL = process.env.NEXT_PUBLIC_HTTP_URL || "http://localhost:3000";
 
 interface ParticipanteStats {
   nombres: string;
@@ -18,7 +18,7 @@ export const getParticipantes = async () => {
     const response = await axios.get(`${BASE_URL}/part`);
     // Mapea los datos para extraer los campos necesarios
     const participantes = response.data.map((participante: any) => ({
-      id: participante.id_part,
+      id: participante.id,
       name: participante.name,
     }));
     return participantes;
@@ -42,10 +42,10 @@ export const buscarParticipante = async (id: number) => {
 
     // Mapea los datos para extraer los campos necesarios
     const participante = {
-      id: response.data[0].id_part,
-      compania: response.data[0].compañia || "No asignada",
-      nombres: response.data[0].nombres || "",
-      apellidos: response.data[0].apellidos || "",
+      id: response.data[0].id,
+      compania: response.data[0].comp || "No asignada",
+      nombres: response.data[0].nombre || "",
+      apellidos: response.data[0].apellido || "",
       habitacion: response.data[0].habitacion || "Sin asignar",
       edad: response.data[0].edad || 0,
       estaca: response.data[0].estaca || "",
