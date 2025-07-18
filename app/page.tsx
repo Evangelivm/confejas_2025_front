@@ -10,11 +10,13 @@ import { ResultadosParticipante } from "./result";
 interface AutocompleteInputProps {
   suggestions: { id: number; name: string }[];
   onSelect: (id: number) => void;
+  onClear: () => void; // Add onClear prop
 }
 
 const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   suggestions,
   onSelect,
+  onClear, // Destructure onClear
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [filteredSuggestions, setFilteredSuggestions] = useState<
@@ -85,6 +87,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     setFilteredSuggestions([]);
     setShowSuggestions(false);
     setActiveSuggestionIndex(0);
+    onClear(); // Call the onClear prop
   };
 
   const SuggestionsListComponent = () => {
@@ -212,6 +215,10 @@ export default function AsistenciaPage() {
               <AutocompleteInput
                 suggestions={participantes}
                 onSelect={handleSelect}
+                onClear={() => {
+                  setSelectedId(null);
+                  setParticipanteInfo(null);
+                }}
               />
               <Button
                 className="bg-[#FFB81C] text-[#006184] hover:bg-[#FFB81C]/90 whitespace-nowrap px-6 w-full sm:w-auto"

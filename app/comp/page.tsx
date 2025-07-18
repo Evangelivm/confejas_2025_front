@@ -1,50 +1,50 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Send, User, ChevronLeft } from "lucide-react"
-import { useMobile } from "@/hooks/use-mobile"
-import RadialMenu from "@/components/radial-menu"
-import Link from "next/link"
-import gsap from "gsap"
+import { useState, useRef, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Send, User, ChevronLeft } from "lucide-react";
+import { useMobile } from "@/hooks/use-mobile";
+import RadialMenu from "@/components/radial-menu";
+import Link from "next/link";
+import gsap from "gsap";
 
 interface CompanyMember {
-  id: number
-  name: string
-  age: number
-  ward: string
+  id: number;
+  name: string;
+  age: number;
+  ward: string;
 }
 
 interface Company {
-  id: number
-  name: string
-  maleCount: number
-  maleTotal: number
-  femaleCount: number
-  femaleTotal: number
-  members: CompanyMember[]
+  id: number;
+  name: string;
+  maleCount: number;
+  maleTotal: number;
+  femaleCount: number;
+  femaleTotal: number;
+  members: CompanyMember[];
 }
 
 export default function CompanyPage() {
-  const [showMenu, setShowMenu] = useState(false)
-  const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [selectedOption, setSelectedOption] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"male" | "female">("male")
-  const [isTransitioning, setIsTransitioning] = useState(false)
-  const isMobile = useMobile()
+  const [showMenu, setShowMenu] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"male" | "female">("male");
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const isMobile = useMobile();
 
   // Refs for elements we want to animate
-  const headerRef = useRef<HTMLDivElement>(null)
-  const cardRef = useRef<HTMLDivElement>(null)
-  const cardContentRef = useRef<HTMLDivElement>(null)
-  const maleTabRef = useRef<HTMLButtonElement>(null)
-  const femaleTabRef = useRef<HTMLButtonElement>(null)
-  const addButtonRef = useRef<HTMLButtonElement>(null)
-  const memberRefs = useRef<(HTMLDivElement | null)[]>([])
+  const headerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const cardContentRef = useRef<HTMLDivElement>(null);
+  const maleTabRef = useRef<HTMLButtonElement>(null);
+  const femaleTabRef = useRef<HTMLButtonElement>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const memberRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Color values
   const colors = {
@@ -60,7 +60,7 @@ export default function CompanyPage() {
       badge: "#fce7f3", // pink-100
       badgeText: "#9d174d", // pink-800
     },
-  }
+  };
 
   // Sample company data
   const company: Company = {
@@ -77,29 +77,29 @@ export default function CompanyPage() {
       { id: 4, name: "Ana Rodríguez", age: 20, ward: "Santa Clara" },
       { id: 5, name: "Sofía Martínez", age: 19, ward: "San Luis" },
     ],
-  }
+  };
 
   // Radial menu handlers
   const handleRightClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setPosition({ x: e.clientX, y: e.clientY })
-    setShowMenu(true)
-  }
+    e.preventDefault();
+    setPosition({ x: e.clientX, y: e.clientY });
+    setShowMenu(true);
+  };
 
   const handleOptionSelect = (option: string) => {
-    setSelectedOption(option)
-    setShowMenu(false)
-  }
+    setSelectedOption(option);
+    setShowMenu(false);
+  };
 
   const handleMobileMenuOpen = () => {
     if (typeof window !== "undefined") {
       setPosition({
         x: window.innerWidth / 2,
         y: window.innerHeight / 2,
-      })
+      });
     }
-    setShowMenu(true)
-  }
+    setShowMenu(true);
+  };
 
   // Initialize animations for member items
   useEffect(() => {
@@ -113,27 +113,27 @@ export default function CompanyPage() {
           duration: 0.5,
           stagger: 0.1,
           ease: "power2.out",
-        },
-      )
+        }
+      );
     }
-  }, [])
+  }, []);
 
   // Handle tab change with GSAP animation
   const handleTabChange = (tab: "male" | "female") => {
-    if (tab === activeTab || isTransitioning) return
+    if (tab === activeTab || isTransitioning) return;
 
-    setIsTransitioning(true)
+    setIsTransitioning(true);
 
     // Get the color scheme based on the selected tab
-    const colorScheme = tab === "male" ? colors.male : colors.female
+    const colorScheme = tab === "male" ? colors.male : colors.female;
 
     // Create a GSAP timeline for smooth transitions
     const tl = gsap.timeline({
       onComplete: () => {
-        setActiveTab(tab)
-        setIsTransitioning(false)
+        setActiveTab(tab);
+        setIsTransitioning(false);
       },
-    })
+    });
 
     // Animate header gradient
     if (headerRef.current) {
@@ -144,8 +144,8 @@ export default function CompanyPage() {
           duration: 0.5,
           ease: "power2.inOut",
         },
-        0,
-      )
+        0
+      );
     }
 
     // Animate card border
@@ -157,8 +157,8 @@ export default function CompanyPage() {
           duration: 0.5,
           ease: "power2.inOut",
         },
-        0,
-      )
+        0
+      );
     }
 
     // Animate add button
@@ -170,8 +170,8 @@ export default function CompanyPage() {
           duration: 0.5,
           ease: "power2.inOut",
         },
-        0,
-      )
+        0
+      );
     }
 
     // Animate tab backgrounds
@@ -185,8 +185,8 @@ export default function CompanyPage() {
             duration: 0.5,
             ease: "power2.inOut",
           },
-          0,
-        )
+          0
+        );
         tl.to(
           femaleTabRef.current,
           {
@@ -195,8 +195,8 @@ export default function CompanyPage() {
             duration: 0.5,
             ease: "power2.inOut",
           },
-          0,
-        )
+          0
+        );
       } else {
         tl.to(
           femaleTabRef.current,
@@ -206,8 +206,8 @@ export default function CompanyPage() {
             duration: 0.5,
             ease: "power2.inOut",
           },
-          0,
-        )
+          0
+        );
         tl.to(
           maleTabRef.current,
           {
@@ -216,8 +216,8 @@ export default function CompanyPage() {
             duration: 0.5,
             ease: "power2.inOut",
           },
-          0,
-        )
+          0
+        );
       }
     }
 
@@ -229,10 +229,10 @@ export default function CompanyPage() {
         y: -20,
         duration: 0.3,
         ease: "power2.in",
-      })
+      });
 
       // Then update the content (this happens in the component re-render)
-      tl.call(() => setActiveTab(tab))
+      tl.call(() => setActiveTab(tab));
 
       // Then fade in and move new content
       tl.to(cardContentRef.current, {
@@ -240,9 +240,9 @@ export default function CompanyPage() {
         y: 0,
         duration: 0.3,
         ease: "power2.out",
-      })
+      });
     }
-  }
+  };
 
   // Radial menu options
   const menuOptions = [
@@ -252,16 +252,18 @@ export default function CompanyPage() {
     { id: "registration", label: "Inscripción", icon: "ClipboardList" },
     { id: "attendance", label: "Asistencia", icon: "CalendarCheck" },
     { id: "statistics", label: "Stats", icon: "BarChart2" },
-  ]
+  ];
 
   // Filter members based on active tab
   const filteredMembers = company.members.filter((member) =>
-    activeTab === "male" ? [1, 2].includes(member.id) : [3, 4, 5].includes(member.id),
-  )
+    activeTab === "male"
+      ? [1, 2].includes(member.id)
+      : [3, 4, 5].includes(member.id)
+  );
 
   // Reset member refs array when members change
   useEffect(() => {
-    memberRefs.current = memberRefs.current.slice(0, filteredMembers.length)
+    memberRefs.current = memberRefs.current.slice(0, filteredMembers.length);
 
     // Animate new members
     if (memberRefs.current.length > 0 && !isTransitioning) {
@@ -274,20 +276,20 @@ export default function CompanyPage() {
           duration: 0.5,
           stagger: 0.1,
           ease: "power2.out",
-        },
-      )
+        }
+      );
     }
-  }, [filteredMembers, isTransitioning])
+  }, [filteredMembers, isTransitioning]);
 
   // Get current color scheme
-  const currentColors = activeTab === "male" ? colors.male : colors.female
+  const currentColors = activeTab === "male" ? colors.male : colors.female;
 
   // Handle member click to navigate to profile
   const handleMemberClick = (memberId: number) => {
-    console.log(`Navigate to profile of member ${memberId}`)
+    console.log(`Navigate to profile of member ${memberId}`);
     // In a real implementation, you would use router.push to navigate
     // router.push(`/profile/${memberId}`)
-  }
+  };
 
   return (
     <main
@@ -316,7 +318,8 @@ export default function CompanyPage() {
             ref={maleTabRef}
             className="flex-1 py-2 px-4 flex items-center justify-center gap-2"
             style={{
-              backgroundColor: activeTab === "male" ? colors.male.primary : "white",
+              backgroundColor:
+                activeTab === "male" ? colors.male.primary : "white",
               color: activeTab === "male" ? "white" : "#334155",
             }}
             onClick={() => handleTabChange("male")}
@@ -324,7 +327,10 @@ export default function CompanyPage() {
           >
             <User className="h-4 w-4" />
             <span>Hombres</span>
-            <Badge variant={activeTab === "male" ? "secondary" : "outline"} className="ml-1">
+            <Badge
+              variant={activeTab === "male" ? "secondary" : "outline"}
+              className="ml-1"
+            >
               {company.maleCount}/{company.maleTotal}
             </Badge>
           </button>
@@ -332,7 +338,8 @@ export default function CompanyPage() {
             ref={femaleTabRef}
             className="flex-1 py-2 px-4 flex items-center justify-center gap-2"
             style={{
-              backgroundColor: activeTab === "female" ? colors.female.primary : "white",
+              backgroundColor:
+                activeTab === "female" ? colors.female.primary : "white",
               color: activeTab === "female" ? "white" : "#334155",
             }}
             onClick={() => handleTabChange("female")}
@@ -340,17 +347,27 @@ export default function CompanyPage() {
           >
             <User className="h-4 w-4" />
             <span>Mujeres</span>
-            <Badge variant={activeTab === "female" ? "secondary" : "outline"} className="ml-1">
+            <Badge
+              variant={activeTab === "female" ? "secondary" : "outline"}
+              className="ml-1"
+            >
               {company.femaleCount}/{company.femaleTotal}
             </Badge>
           </button>
         </div>
 
         {/* Members list */}
-        <Card ref={cardRef} className="rounded-xl" style={{ borderWidth: "2px", borderColor: currentColors.primary }}>
+        <Card
+          ref={cardRef}
+          className="rounded-xl"
+          style={{ borderWidth: "2px", borderColor: currentColors.primary }}
+        >
           <CardHeader className="pb-6">
             <CardTitle className="text-lg flex items-center">
-              <User className="h-5 w-5 mr-2" style={{ color: currentColors.primary }} />
+              <User
+                className="h-5 w-5 mr-2"
+                style={{ color: currentColors.primary }}
+              />
               {activeTab === "male" ? "Hombres" : "Mujeres"}
               <Badge
                 variant="outline"
@@ -373,7 +390,9 @@ export default function CompanyPage() {
                 filteredMembers.map((member, index) => (
                   <button
                     key={member.id}
-                    ref={(el) => (memberRefs.current[index] = el)}
+                    ref={(el) => {
+                      memberRefs.current[index] = el;
+                    }}
                     className="flex w-full items-center justify-between border-b pb-3 last:border-0 last:pb-0 text-left hover:bg-slate-50 transition-colors rounded px-2 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-white focus:ring-slate-300"
                     style={{ opacity: 0 }} // Initial state for GSAP animation
                     onClick={() => handleMemberClick(member.id)}
@@ -405,7 +424,9 @@ export default function CompanyPage() {
                   </button>
                 ))
               ) : (
-                <div className="text-center py-4 text-slate-500">No hay miembros registrados</div>
+                <div className="text-center py-4 text-slate-500">
+                  No hay miembros registrados
+                </div>
               )}
             </div>
           </CardContent>
@@ -453,5 +474,5 @@ export default function CompanyPage() {
         />
       )}
     </main>
-  )
+  );
 }
