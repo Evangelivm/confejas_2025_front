@@ -14,9 +14,12 @@ import gsap from "gsap";
 
 interface CompanyMember {
   id: number;
-  name: string;
-  age: number;
-  ward: string;
+  nombres: string;
+  edad: number;
+  estaca: string;
+  habitacion: string;
+  sexo: "male" | "female";
+  asistio: "Si" | "No";
 }
 
 interface Company {
@@ -44,7 +47,7 @@ export default function CompanyPage() {
   const maleTabRef = useRef<HTMLButtonElement>(null);
   const femaleTabRef = useRef<HTMLButtonElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
-  const memberRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const memberRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
   // Color values
   const colors = {
@@ -71,11 +74,52 @@ export default function CompanyPage() {
     femaleCount: 3,
     femaleTotal: 10,
     members: [
-      { id: 1, name: "Armando Paredes", age: 18, ward: "Santa Clara" },
-      { id: 2, name: "Juan Pérez", age: 19, ward: "San Luis" },
-      { id: 3, name: "María González", age: 18, ward: "Salamanca" },
-      { id: 4, name: "Ana Rodríguez", age: 20, ward: "Santa Clara" },
-      { id: 5, name: "Sofía Martínez", age: 19, ward: "San Luis" },
+      {
+        id: 1,
+        nombres: "Armando Paredes",
+        edad: 18,
+        estaca: "Santa Clara",
+        habitacion: "H-101",
+        sexo: "male",
+        asistio: "Si",
+      },
+      {
+        id: 2,
+        nombres: "Juan Pérez",
+        edad: 19,
+        estaca: "San Luis",
+        habitacion: "H-102",
+        sexo: "male",
+        asistio: "No",
+      },
+      {
+        id: 3,
+        nombres:
+          "María González González González González González González González González González",
+        edad: 18,
+        estaca: "Salamanca",
+        habitacion: "M-201",
+        sexo: "female",
+        asistio: "Si",
+      },
+      {
+        id: 4,
+        nombres: "Ana Rodríguez",
+        edad: 20,
+        estaca: "Santa Clara",
+        habitacion: "M-201",
+        sexo: "female",
+        asistio: "Si",
+      },
+      {
+        id: 5,
+        nombres: "Sofía Martínez",
+        edad: 19,
+        estaca: "San Luis",
+        habitacion: "M-202",
+        sexo: "female",
+        asistio: "No",
+      },
     ],
   };
 
@@ -255,10 +299,8 @@ export default function CompanyPage() {
   ];
 
   // Filter members based on active tab
-  const filteredMembers = company.members.filter((member) =>
-    activeTab === "male"
-      ? [1, 2].includes(member.id)
-      : [3, 4, 5].includes(member.id)
+  const filteredMembers = company.members.filter(
+    (member) => member.asistio === "Si" && member.sexo === activeTab
   );
 
   // Reset member refs array when members change
@@ -283,13 +325,6 @@ export default function CompanyPage() {
 
   // Get current color scheme
   const currentColors = activeTab === "male" ? colors.male : colors.female;
-
-  // Handle member click to navigate to profile
-  const handleMemberClick = (memberId: number) => {
-    console.log(`Navigate to profile of member ${memberId}`);
-    // In a real implementation, you would use router.push to navigate
-    // router.push(`/profile/${memberId}`)
-  };
 
   return (
     <main
@@ -388,28 +423,30 @@ export default function CompanyPage() {
             <div className="space-y-3">
               {filteredMembers.length > 0 ? (
                 filteredMembers.map((member, index) => (
-                  <button
+                  <Link
+                    href={`/registro/${member.id}`}
                     key={member.id}
                     ref={(el) => {
                       memberRefs.current[index] = el;
                     }}
-                    className="flex w-full items-center justify-between border-b pb-3 last:border-0 last:pb-0 text-left hover:bg-slate-50 transition-colors rounded px-2 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-white focus:ring-slate-300"
+                    className="flex w-full items-start justify-between border-b py-3 last:border-0 last:pb-0 text-left hover:bg-slate-50 transition-colors rounded px-2 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-white focus:ring-slate-300"
                     style={{ opacity: 0 }} // Initial state for GSAP animation
-                    onClick={() => handleMemberClick(member.id)}
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center flex-1 min-w-0 mr-2">
                       <Badge
                         variant="outline"
-                        className="mr-2"
+                        className="mr-2 flex-shrink-0"
                         style={{
                           backgroundColor: currentColors.badge,
                           color: currentColors.badgeText,
                           borderColor: "transparent",
                         }}
                       >
-                        {member.age}
+                        {member.habitacion}
                       </Badge>
-                      <span className="font-medium">{member.name}</span>
+                      <span className="font-medium whitespace-normal break-words">
+                        {member.nombres} ({member.edad})
+                      </span>
                     </div>
                     <Badge
                       className="border"
@@ -419,9 +456,9 @@ export default function CompanyPage() {
                         borderColor: "#e5e7eb", // gray-200
                       }}
                     >
-                      {member.ward}
+                      {member.estaca}
                     </Badge>
-                  </button>
+                  </Link>
                 ))
               ) : (
                 <div className="text-center py-4 text-slate-500">

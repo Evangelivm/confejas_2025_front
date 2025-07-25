@@ -496,9 +496,9 @@ export default function ProfilePage() {
               variant="outline"
               style={{
                 backgroundColor:
-                  participanteData?.miembro === "Si" ? "#dcfce7" : "#fee2e2", // green-100 or red-100
+                  participanteData?.asistio === "Si" ? "#dcfce7" : "#fee2e2", // green-100 or red-100
                 color:
-                  participanteData?.miembro === "Si" ? "#16a34a" : "#ef4444", // green-600 or red-600
+                  participanteData?.asistio === "Si" ? "#16a34a" : "#ef4444", // green-600 or red-600
                 borderColor: "transparent",
               }}
             >
@@ -506,7 +506,7 @@ export default function ProfilePage() {
                 ? "Cargando..."
                 : error
                 ? "Error"
-                : participanteData.miembro === "Si"
+                : participanteData.asistio === "Si"
                 ? "Asistió"
                 : "No Asistió"}
             </Badge>
@@ -554,7 +554,7 @@ export default function ProfilePage() {
                         ? "Cargando..."
                         : error
                         ? "Error"
-                        : `${formatearFecha(participanteData.cumpleaños)} (${
+                        : `${formatearFecha(participanteData.nacimiento)} (${
                             participanteData.edad
                           } años)`}
                     </p>

@@ -496,6 +496,7 @@ export default function HistorialAtencionesPage() {
     { id: "registration", label: "Inscripción", icon: "ClipboardList" },
     { id: "attendance", label: "Asistencia", icon: "CalendarCheck" },
     { id: "statistics", label: "Stats", icon: "BarChart2" },
+    { id: "inventory", label: "Inventario", icon: "Package" },
   ];
 
   return (
@@ -515,6 +516,13 @@ export default function HistorialAtencionesPage() {
         </div>
         <Button variant="secondary" size="sm" onClick={nuevaAtencion}>
           Nueva Atención
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => router.push("/inventario-medicamentos")}
+        >
+          Inventario
         </Button>
       </div>
 

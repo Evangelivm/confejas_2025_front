@@ -64,7 +64,6 @@ interface AtencionMedica {
   fecha: string;
   hora: string;
   motivoConsulta: string;
-  sintomas: string[];
   tratamiento: string;
   medicamentos: {
     nombre: string;
@@ -72,9 +71,9 @@ interface AtencionMedica {
     frecuencia: string;
     duracion: string;
   }[];
-  indicaciones: string;
   seguimiento: boolean;
   fechaSeguimiento?: string;
+  horaSeguimiento?: string;
 }
 
 // Datos de ejemplo
@@ -144,7 +143,6 @@ export default function AtencionMedicaPage() {
     useState<Participante | null>(null);
   const [mostrarBusquedaParticipante, setMostrarBusquedaParticipante] =
     useState(false);
-  const [sintomaActual, setSintomaActual] = useState("");
   const [medicamentoActual, setMedicamentoActual] = useState({
     nombre: "",
     dosis: "",
@@ -180,12 +178,11 @@ export default function AtencionMedicaPage() {
     fecha: new Date().toISOString().split("T")[0],
     hora: new Date().toTimeString().split(" ")[0].substring(0, 5),
     motivoConsulta: "",
-    sintomas: [],
     tratamiento: "",
     medicamentos: [],
-    indicaciones: "",
     seguimiento: false,
     fechaSeguimiento: "",
+    horaSeguimiento: "",
   });
 
   // Initialize step animations and update time
@@ -246,24 +243,6 @@ export default function AtencionMedicaPage() {
     setAtencion({ ...atencion, participanteId: participante.id });
     setMostrarBusquedaParticipante(false);
     toast.success(`Participante seleccionado: ${participante.nombre}`);
-  };
-
-  // Agregar síntoma
-  const agregarSintoma = () => {
-    if (sintomaActual.trim() !== "") {
-      setAtencion({
-        ...atencion,
-        sintomas: [...atencion.sintomas, sintomaActual.trim()],
-      });
-      setSintomaActual("");
-    }
-  };
-
-  // Eliminar síntoma
-  const eliminarSintoma = (index: number) => {
-    const nuevosSintomas = [...atencion.sintomas];
-    nuevosSintomas.splice(index, 1);
-    setAtencion({ ...atencion, sintomas: nuevosSintomas });
   };
 
   // Agregar medicamento
@@ -344,7 +323,26 @@ export default function AtencionMedicaPage() {
     }
 
     // Aquí iría la lógica para enviar los datos al servidor
-    console.log("Datos de atención médica:", atencion);
+    const {
+      fecha,
+      hora,
+      fechaSeguimiento,
+      horaSeguimiento,
+      participanteId,
+      ...restOfAtencion
+    } = atencion;
+    const dataToSend: any = {
+      ...restOfAtencion,
+      datos_id: participanteId,
+      fecha_consulta: new Date(`${fecha}T${hora}`),
+    };
+
+    if (atencion.seguimiento && fechaSeguimiento && horaSeguimiento) {
+      dataToSend.fecha_seguimiento = new Date(
+        `${fechaSeguimiento}T${horaSeguimiento}`
+      );
+    }
+    console.log("Datos de atención médica:", dataToSend);
     toast.success("Atención médica registrada correctamente");
 
     // Simular envío exitoso
@@ -538,7 +536,9 @@ export default function AtencionMedicaPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="motivoConsulta">Motivo de Consulta</Label>
+                  <Label htmlFor="motivoConsulta">
+                    Motivo de Consulta / Síntomas
+                  </Label>
                   <Textarea
                     id="motivoConsulta"
                     placeholder="Describa el motivo de la consulta"
@@ -604,45 +604,6 @@ export default function AtencionMedicaPage() {
                     <Separator className="my-4" />
                   </div>
                 )}
-
-                <div className="space-y-2">
-                  <Label>Síntomas</Label>
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Agregar síntoma"
-                      value={sintomaActual}
-                      onChange={(e) => setSintomaActual(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          agregarSintoma();
-                        }
-                      }}
-                    />
-                    <Button type="button" size="icon" onClick={agregarSintoma}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {atencion.sintomas.map((sintoma, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="pl-2 pr-1 py-1"
-                      >
-                        {sintoma}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-5 w-5 p-0 ml-1"
-                          onClick={() => eliminarSintoma(index)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
@@ -861,21 +822,39 @@ export default function AtencionMedicaPage() {
                 </div>
 
                 {atencion.seguimiento && (
-                  <div className="space-y-2">
-                    <Label htmlFor="fechaSeguimiento">
-                      Fecha de Seguimiento
-                    </Label>
-                    <Input
-                      id="fechaSeguimiento"
-                      type="date"
-                      value={atencion.fechaSeguimiento}
-                      onChange={(e) =>
-                        setAtencion({
-                          ...atencion,
-                          fechaSeguimiento: e.target.value,
-                        })
-                      }
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fechaSeguimiento">
+                        Fecha de Seguimiento
+                      </Label>
+                      <Input
+                        id="fechaSeguimiento"
+                        type="date"
+                        value={atencion.fechaSeguimiento}
+                        onChange={(e) =>
+                          setAtencion({
+                            ...atencion,
+                            fechaSeguimiento: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="horaSeguimiento">
+                        Hora de Seguimiento
+                      </Label>
+                      <Input
+                        id="horaSeguimiento"
+                        type="time"
+                        value={atencion.horaSeguimiento}
+                        onChange={(e) =>
+                          setAtencion({
+                            ...atencion,
+                            horaSeguimiento: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
                 )}
               </div>

@@ -28,6 +28,20 @@ export const getParticipantes = async () => {
   }
 };
 
+// Función para obtener los miembros de una compañía
+export const getCompanyMembers = async (companyId: number) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/stats/${companyId}`);
+    return response.data;
+  } catch (error) {
+    console.error(
+      `Error al obtener los miembros de la compañía ${companyId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
 // Función para buscar un participante por ID
 export const buscarParticipante = async (id: number) => {
   try {
@@ -88,7 +102,7 @@ export const buscarParticipanteCompleto = async (id: number) => {
       barrio: response.data[0].barrio || "",
       asistio: response.data[0].asistio || "No",
       telefono: response.data[0].telefono || "",
-      cumpleaños: response.data[0].cumpleaños || "",
+      nacimiento: response.data[0].nacimiento || "",
       talla: response.data[0].talla || "",
       tipo: response.data[0].tipo || "",
       sexo: response.data[0].sexo || "",

@@ -1,105 +1,147 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Send, User, ChevronLeft } from "lucide-react"
-import { useMobile } from "@/hooks/use-mobile"
-import RadialMenu from "@/components/radial-menu"
-import Link from "next/link"
-import gsap from "gsap"
+import { useState, useRef, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Send, User, ChevronLeft } from "lucide-react";
+import { useMobile } from "@/hooks/use-mobile";
+import RadialMenu from "@/components/radial-menu";
+import Link from "next/link";
+import gsap from "gsap";
+import { getCompanyMembers } from "@/lib/connections";
+import { useParams } from "next/navigation";
 
 interface CompanyMember {
-  id: number
-  name: string
-  age: number
-  ward: string
+  id: number;
+  nombres: string;
+  edad?: number;
+  estaca: string;
+  habitacion: string;
+  sexo: "H" | "M";
+  asistio: "Si" | "No";
+  comp: string;
 }
 
 interface Company {
-  id: number
-  name: string
-  maleCount: number
-  maleTotal: number
-  femaleCount: number
-  femaleTotal: number
-  members: CompanyMember[]
+  id: number;
+  name: string;
+  maleCount: number;
+  maleTotal: number;
+  femaleCount: number;
+  femaleTotal: number;
+  members: CompanyMember[];
 }
 
 export default function CompanyPage() {
-  const [showMenu, setShowMenu] = useState(false)
-  const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [selectedOption, setSelectedOption] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"male" | "female">("male")
-  const [isTransitioning, setIsTransitioning] = useState(false)
-  const isMobile = useMobile()
+  const [company, setCompany] = useState<Company | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"H" | "M">("H");
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const isMobile = useMobile();
+  const params = useParams();
 
   // Refs for elements we want to animate
-  const headerRef = useRef<HTMLDivElement>(null)
-  const cardRef = useRef<HTMLDivElement>(null)
-  const cardContentRef = useRef<HTMLDivElement>(null)
-  const maleTabRef = useRef<HTMLButtonElement>(null)
-  const femaleTabRef = useRef<HTMLButtonElement>(null)
-  const addButtonRef = useRef<HTMLButtonElement>(null)
-  const memberRefs = useRef<(HTMLDivElement | null)[]>([])
+  const headerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const cardContentRef = useRef<HTMLDivElement>(null);
+  const maleTabRef = useRef<HTMLButtonElement>(null);
+  const femaleTabRef = useRef<HTMLButtonElement>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const memberRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
   // Color values
   const colors = {
-    male: {
+    H: {
       primary: "#2563eb", // blue-600
       secondary: "#1d4ed8", // blue-700
       badge: "#dbeafe", // blue-100
       badgeText: "#1e40af", // blue-800
     },
-    female: {
+    M: {
       primary: "#db2777", // pink-600
       secondary: "#be185d", // pink-700
       badge: "#fce7f3", // pink-100
       badgeText: "#9d174d", // pink-800
     },
-  }
+  };
 
-  // Sample company data
-  const company: Company = {
-    id: 1,
-    name: "Compañía 1",
-    maleCount: 2,
-    maleTotal: 12,
-    femaleCount: 3,
-    femaleTotal: 10,
-    members: [
-      { id: 1, name: "Armando Paredes", age: 18, ward: "Santa Clara" },
-      { id: 2, name: "Juan Pérez", age: 19, ward: "San Luis" },
-      { id: 3, name: "María González", age: 18, ward: "Salamanca" },
-      { id: 4, name: "Ana Rodríguez", age: 20, ward: "Santa Clara" },
-      { id: 5, name: "Sofía Martínez", age: 19, ward: "San Luis" },
-    ],
-  }
+  useEffect(() => {
+    const fetchCompanyData = async () => {
+      const companyIdFromUrl = Number(params.id);
+      if (isNaN(companyIdFromUrl)) return;
+
+      try {
+        const members: CompanyMember[] = await getCompanyMembers(
+          companyIdFromUrl
+        );
+
+        if (members.length === 0) {
+          setCompany({
+            id: companyIdFromUrl,
+            name: `Compañía ${companyIdFromUrl}`,
+            maleCount: 0,
+            maleTotal: 0,
+            femaleCount: 0,
+            femaleTotal: 0,
+            members: [],
+          });
+          return;
+        }
+
+        const companyComp = members[0].comp;
+        const companyId = parseInt(companyComp.replace("C", ""), 10);
+
+        const maleMembers = members.filter((m) => m.sexo === "H");
+        const femaleMembers = members.filter((m) => m.sexo === "M");
+
+        const maleCount = maleMembers.filter((m) => m.asistio === "Si").length;
+        const femaleCount = femaleMembers.filter(
+          (m) => m.asistio === "Si"
+        ).length;
+
+        setCompany({
+          id: companyId,
+          name: `Compañía ${companyId}`,
+          maleCount,
+          maleTotal: maleMembers.length,
+          femaleCount,
+          femaleTotal: femaleMembers.length,
+          members,
+        });
+      } catch (error) {
+        console.error("Failed to fetch company members:", error);
+      }
+    };
+
+    fetchCompanyData();
+  }, [params.id]);
 
   // Radial menu handlers
   const handleRightClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setPosition({ x: e.clientX, y: e.clientY })
-    setShowMenu(true)
-  }
+    e.preventDefault();
+    setPosition({ x: e.clientX, y: e.clientY });
+    setShowMenu(true);
+  };
 
   const handleOptionSelect = (option: string) => {
-    setSelectedOption(option)
-    setShowMenu(false)
-  }
+    setSelectedOption(option);
+    setShowMenu(false);
+  };
 
   const handleMobileMenuOpen = () => {
     if (typeof window !== "undefined") {
       setPosition({
         x: window.innerWidth / 2,
         y: window.innerHeight / 2,
-      })
+      });
     }
-    setShowMenu(true)
-  }
+    setShowMenu(true);
+  };
 
   // Initialize animations for member items
   useEffect(() => {
@@ -113,27 +155,27 @@ export default function CompanyPage() {
           duration: 0.5,
           stagger: 0.1,
           ease: "power2.out",
-        },
-      )
+        }
+      );
     }
-  }, [])
+  }, []);
 
   // Handle tab change with GSAP animation
-  const handleTabChange = (tab: "male" | "female") => {
-    if (tab === activeTab || isTransitioning) return
+  const handleTabChange = (tab: "H" | "M") => {
+    if (tab === activeTab || isTransitioning) return;
 
-    setIsTransitioning(true)
+    setIsTransitioning(true);
 
     // Get the color scheme based on the selected tab
-    const colorScheme = tab === "male" ? colors.male : colors.female
+    const colorScheme = tab === "H" ? colors.H : colors.M;
 
     // Create a GSAP timeline for smooth transitions
     const tl = gsap.timeline({
       onComplete: () => {
-        setActiveTab(tab)
-        setIsTransitioning(false)
+        setActiveTab(tab);
+        setIsTransitioning(false);
       },
-    })
+    });
 
     // Animate header gradient
     if (headerRef.current) {
@@ -144,8 +186,8 @@ export default function CompanyPage() {
           duration: 0.5,
           ease: "power2.inOut",
         },
-        0,
-      )
+        0
+      );
     }
 
     // Animate card border
@@ -157,8 +199,8 @@ export default function CompanyPage() {
           duration: 0.5,
           ease: "power2.inOut",
         },
-        0,
-      )
+        0
+      );
     }
 
     // Animate add button
@@ -170,13 +212,13 @@ export default function CompanyPage() {
           duration: 0.5,
           ease: "power2.inOut",
         },
-        0,
-      )
+        0
+      );
     }
 
     // Animate tab backgrounds
     if (maleTabRef.current && femaleTabRef.current) {
-      if (tab === "male") {
+      if (tab === "H") {
         tl.to(
           maleTabRef.current,
           {
@@ -185,8 +227,8 @@ export default function CompanyPage() {
             duration: 0.5,
             ease: "power2.inOut",
           },
-          0,
-        )
+          0
+        );
         tl.to(
           femaleTabRef.current,
           {
@@ -195,8 +237,8 @@ export default function CompanyPage() {
             duration: 0.5,
             ease: "power2.inOut",
           },
-          0,
-        )
+          0
+        );
       } else {
         tl.to(
           femaleTabRef.current,
@@ -206,8 +248,8 @@ export default function CompanyPage() {
             duration: 0.5,
             ease: "power2.inOut",
           },
-          0,
-        )
+          0
+        );
         tl.to(
           maleTabRef.current,
           {
@@ -216,8 +258,8 @@ export default function CompanyPage() {
             duration: 0.5,
             ease: "power2.inOut",
           },
-          0,
-        )
+          0
+        );
       }
     }
 
@@ -229,10 +271,10 @@ export default function CompanyPage() {
         y: -20,
         duration: 0.3,
         ease: "power2.in",
-      })
+      });
 
       // Then update the content (this happens in the component re-render)
-      tl.call(() => setActiveTab(tab))
+      tl.call(() => setActiveTab(tab));
 
       // Then fade in and move new content
       tl.to(cardContentRef.current, {
@@ -240,9 +282,9 @@ export default function CompanyPage() {
         y: 0,
         duration: 0.3,
         ease: "power2.out",
-      })
+      });
     }
-  }
+  };
 
   // Radial menu options
   const menuOptions = [
@@ -252,16 +294,17 @@ export default function CompanyPage() {
     { id: "registration", label: "Inscripción", icon: "ClipboardList" },
     { id: "attendance", label: "Asistencia", icon: "CalendarCheck" },
     { id: "statistics", label: "Stats", icon: "BarChart2" },
-  ]
+  ];
 
   // Filter members based on active tab
-  const filteredMembers = company.members.filter((member) =>
-    activeTab === "male" ? [1, 2].includes(member.id) : [3, 4, 5].includes(member.id),
-  )
+  const filteredMembers =
+    company?.members.filter(
+      (member) => member.asistio === "Si" && member.sexo === activeTab
+    ) || [];
 
   // Reset member refs array when members change
   useEffect(() => {
-    memberRefs.current = memberRefs.current.slice(0, filteredMembers.length)
+    memberRefs.current = memberRefs.current.slice(0, filteredMembers.length);
 
     // Animate new members
     if (memberRefs.current.length > 0 && !isTransitioning) {
@@ -274,19 +317,20 @@ export default function CompanyPage() {
           duration: 0.5,
           stagger: 0.1,
           ease: "power2.out",
-        },
-      )
+        }
+      );
     }
-  }, [filteredMembers, isTransitioning])
+  }, [filteredMembers, isTransitioning]);
 
   // Get current color scheme
-  const currentColors = activeTab === "male" ? colors.male : colors.female
+  const currentColors = activeTab === "H" ? colors.H : colors.M;
 
-  // Handle member click to navigate to profile
-  const handleMemberClick = (memberId: number) => {
-    console.log(`Navigate to profile of member ${memberId}`)
-    // In a real implementation, you would use router.push to navigate
-    // router.push(`/profile/${memberId}`)
+  if (!company) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        Cargando...
+      </div>
+    );
   }
 
   return (
@@ -316,15 +360,18 @@ export default function CompanyPage() {
             ref={maleTabRef}
             className="flex-1 py-2 px-4 flex items-center justify-center gap-2"
             style={{
-              backgroundColor: activeTab === "male" ? colors.male.primary : "white",
-              color: activeTab === "male" ? "white" : "#334155",
+              backgroundColor: activeTab === "H" ? colors.H.primary : "white",
+              color: activeTab === "H" ? "white" : "#334155",
             }}
-            onClick={() => handleTabChange("male")}
+            onClick={() => handleTabChange("H")}
             disabled={isTransitioning}
           >
             <User className="h-4 w-4" />
             <span>Hombres</span>
-            <Badge variant={activeTab === "male" ? "secondary" : "outline"} className="ml-1">
+            <Badge
+              variant={activeTab === "H" ? "secondary" : "outline"}
+              className="ml-1"
+            >
               {company.maleCount}/{company.maleTotal}
             </Badge>
           </button>
@@ -332,26 +379,36 @@ export default function CompanyPage() {
             ref={femaleTabRef}
             className="flex-1 py-2 px-4 flex items-center justify-center gap-2"
             style={{
-              backgroundColor: activeTab === "female" ? colors.female.primary : "white",
-              color: activeTab === "female" ? "white" : "#334155",
+              backgroundColor: activeTab === "M" ? colors.M.primary : "white",
+              color: activeTab === "M" ? "white" : "#334155",
             }}
-            onClick={() => handleTabChange("female")}
+            onClick={() => handleTabChange("M")}
             disabled={isTransitioning}
           >
             <User className="h-4 w-4" />
             <span>Mujeres</span>
-            <Badge variant={activeTab === "female" ? "secondary" : "outline"} className="ml-1">
+            <Badge
+              variant={activeTab === "M" ? "secondary" : "outline"}
+              className="ml-1"
+            >
               {company.femaleCount}/{company.femaleTotal}
             </Badge>
           </button>
         </div>
 
         {/* Members list */}
-        <Card ref={cardRef} className="rounded-xl" style={{ borderWidth: "2px", borderColor: currentColors.primary }}>
+        <Card
+          ref={cardRef}
+          className="rounded-xl"
+          style={{ borderWidth: "2px", borderColor: currentColors.primary }}
+        >
           <CardHeader className="pb-6">
             <CardTitle className="text-lg flex items-center">
-              <User className="h-5 w-5 mr-2" style={{ color: currentColors.primary }} />
-              {activeTab === "male" ? "Hombres" : "Mujeres"}
+              <User
+                className="h-5 w-5 mr-2"
+                style={{ color: currentColors.primary }}
+              />
+              {activeTab === "H" ? "Hombres" : "Mujeres"}
               <Badge
                 variant="outline"
                 className="ml-auto"
@@ -361,7 +418,7 @@ export default function CompanyPage() {
                   borderColor: "transparent",
                 }}
               >
-                {activeTab === "male"
+                {activeTab === "H"
                   ? `${company.maleCount}/${company.maleTotal}`
                   : `${company.femaleCount}/${company.femaleTotal}`}
               </Badge>
@@ -371,26 +428,30 @@ export default function CompanyPage() {
             <div className="space-y-3">
               {filteredMembers.length > 0 ? (
                 filteredMembers.map((member, index) => (
-                  <button
+                  <Link
+                    href={`/registro/${member.id}`}
                     key={member.id}
-                    ref={(el) => (memberRefs.current[index] = el)}
-                    className="flex w-full items-center justify-between border-b pb-3 last:border-0 last:pb-0 text-left hover:bg-slate-50 transition-colors rounded px-2 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-white focus:ring-slate-300"
+                    ref={(el) => {
+                      memberRefs.current[index] = el;
+                    }}
+                    className="flex w-full items-start justify-between border-b py-3 last:border-0 last:pb-0 text-left hover:bg-slate-50 transition-colors rounded px-2 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-white focus:ring-slate-300"
                     style={{ opacity: 0 }} // Initial state for GSAP animation
-                    onClick={() => handleMemberClick(member.id)}
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center flex-1 min-w-0 mr-2">
                       <Badge
                         variant="outline"
-                        className="mr-2"
+                        className="mr-2 flex-shrink-0"
                         style={{
                           backgroundColor: currentColors.badge,
                           color: currentColors.badgeText,
                           borderColor: "transparent",
                         }}
                       >
-                        {member.age}
+                        {member.habitacion}
                       </Badge>
-                      <span className="font-medium">{member.name}</span>
+                      <span className="font-medium whitespace-normal break-words">
+                        {member.nombres} ({member.edad})
+                      </span>
                     </div>
                     <Badge
                       className="border"
@@ -400,12 +461,14 @@ export default function CompanyPage() {
                         borderColor: "#e5e7eb", // gray-200
                       }}
                     >
-                      {member.ward}
+                      {member.estaca}
                     </Badge>
-                  </button>
+                  </Link>
                 ))
               ) : (
-                <div className="text-center py-4 text-slate-500">No hay miembros registrados</div>
+                <div className="text-center py-4 text-slate-500">
+                  No hay miembros registrados
+                </div>
               )}
             </div>
           </CardContent>
@@ -453,5 +516,5 @@ export default function CompanyPage() {
         />
       )}
     </main>
-  )
+  );
 }
