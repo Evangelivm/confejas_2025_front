@@ -254,3 +254,17 @@ export const registrarAtencion = async (data: any) => {
     throw error;
   }
 };
+
+// Nueva función para obtener el historial de atenciones médicas
+export const getHistorialAtenciones = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/salud/atencion/`);
+    return response.data;
+  } catch (error) {
+    console.error(
+      "Error al obtener el historial de atenciones médicas:",
+      error
+    );
+    throw error;
+  }
+};

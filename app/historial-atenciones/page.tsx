@@ -1,7 +1,5 @@
 "use client";
-
 import type React from "react";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -14,6 +12,7 @@ import {
   X,
   ArrowUpDown,
   Send,
+  Clock,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,451 +44,202 @@ import {
 } from "@/components/ui/dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import RadialMenu from "@/components/radial-menu";
-
+import { getHistorialAtenciones, getParticipantes } from "@/lib/connections";
 // Tipos de datos
-interface Participante {
-  id: number;
-  nombre: string;
-  edad: number;
-  sexo: string;
-  compania: string;
-}
-
-interface DiagnosticoCIE {
-  codigo: string;
-  descripcion: string;
-}
-
-interface Medicamento {
-  nombre: string;
-  dosis: string;
+interface MedicamentoRecetado {
   frecuencia: string;
   duracion: string;
-}
-
-interface AtencionMedica {
-  id: number;
-  participanteId: number;
-  participante: Participante;
-  fecha: string;
-  hora: string;
-  motivoConsulta: string;
-  sintomas: string[];
-  signos: {
-    temperatura: string;
-    presionArterial: string;
-    frecuenciaCardiaca: string;
-    frecuenciaRespiratoria: string;
-    saturacionOxigeno: string;
+  inventario_salud: {
+    nombre: string;
+    descripcion: string;
+    dosis: string | null;
   };
-  diagnosticos: DiagnosticoCIE[];
-  tratamiento: string;
-  medicamentos: Medicamento[];
-  indicaciones: string;
-  seguimiento: boolean;
-  fechaSeguimiento?: string;
-  medico: string;
 }
-
-// Datos de ejemplo para el historial
-const participantesEjemplo: Participante[] = [
-  {
-    id: 1,
-    nombre: "Víctor Jharem Ranyi Gomez Ortiz",
-    edad: 18,
-    sexo: "H",
-    compania: "1",
-  },
-  {
-    id: 2,
-    nombre: "Ana María Rodríguez López",
-    edad: 20,
-    sexo: "M",
-    compania: "1",
-  },
-  { id: 3, nombre: "Carlos Sánchez Pérez", edad: 19, sexo: "H", compania: "2" },
-  {
-    id: 4,
-    nombre: "Sofía Martínez González",
-    edad: 18,
-    sexo: "M",
-    compania: "2",
-  },
-  {
-    id: 5,
-    nombre: "Juan Pablo Hernández Torres",
-    edad: 21,
-    sexo: "H",
-    compania: "3",
-  },
-];
-
-const historialAtenciones: AtencionMedica[] = [
-  {
-    id: 1,
-    participanteId: 1,
-    participante: participantesEjemplo[0],
-    fecha: "2023-05-15",
-    hora: "09:30",
-    motivoConsulta: "Dolor de garganta y fiebre",
-    sintomas: ["Dolor de garganta", "Fiebre", "Malestar general"],
-    signos: {
-      temperatura: "38.5",
-      presionArterial: "120/80",
-      frecuenciaCardiaca: "88",
-      frecuenciaRespiratoria: "18",
-      saturacionOxigeno: "97",
-    },
-    diagnosticos: [
-      { codigo: "J02.9", descripcion: "Faringitis aguda, no especificada" },
-    ],
-    tratamiento: "Reposo, hidratación y medicamentos",
-    medicamentos: [
-      {
-        nombre: "Paracetamol",
-        dosis: "500mg",
-        frecuencia: "Cada 8 horas",
-        duracion: "5 días",
-      },
-      {
-        nombre: "Ibuprofeno",
-        dosis: "400mg",
-        frecuencia: "Cada 8 horas",
-        duracion: "3 días",
-      },
-    ],
-    indicaciones: "Reposo por 48 horas, evitar alimentos irritantes",
-    seguimiento: false,
-    medico: "Dr. Roberto Méndez",
-  },
-  {
-    id: 2,
-    participanteId: 2,
-    participante: participantesEjemplo[1],
-    fecha: "2023-05-16",
-    hora: "10:15",
-    motivoConsulta: "Dolor abdominal y náuseas",
-    sintomas: ["Dolor abdominal", "Náuseas", "Vómitos"],
-    signos: {
-      temperatura: "37.2",
-      presionArterial: "110/70",
-      frecuenciaCardiaca: "90",
-      frecuenciaRespiratoria: "16",
-      saturacionOxigeno: "98",
-    },
-    diagnosticos: [
-      {
-        codigo: "A09",
-        descripcion: "Diarrea y gastroenteritis de presunto origen infeccioso",
-      },
-    ],
-    tratamiento: "Dieta blanda, hidratación y medicamentos",
-    medicamentos: [
-      {
-        nombre: "Metoclopramida",
-        dosis: "10mg",
-        frecuencia: "Cada 8 horas",
-        duracion: "3 días",
-      },
-      {
-        nombre: "Suero oral",
-        dosis: "1 sobre",
-        frecuencia: "Cada 6 horas",
-        duracion: "2 días",
-      },
-    ],
-    indicaciones: "Dieta blanda, evitar lácteos y grasas",
-    seguimiento: true,
-    fechaSeguimiento: "2023-05-19",
-    medico: "Dra. Carmen Jiménez",
-  },
-  {
-    id: 3,
-    participanteId: 3,
-    participante: participantesEjemplo[2],
-    fecha: "2023-05-16",
-    hora: "11:45",
-    motivoConsulta: "Dolor de cabeza intenso",
-    sintomas: ["Cefalea", "Fotofobia", "Náuseas"],
-    signos: {
-      temperatura: "36.8",
-      presionArterial: "130/85",
-      frecuenciaCardiaca: "78",
-      frecuenciaRespiratoria: "16",
-      saturacionOxigeno: "99",
-    },
-    diagnosticos: [{ codigo: "R51", descripcion: "Cefalea" }],
-    tratamiento: "Reposo en ambiente oscuro y medicamentos",
-    medicamentos: [
-      {
-        nombre: "Paracetamol",
-        dosis: "1g",
-        frecuencia: "Cada 8 horas",
-        duracion: "3 días",
-      },
-    ],
-    indicaciones: "Descansar en ambiente oscuro y silencioso",
-    seguimiento: false,
-    medico: "Dr. Roberto Méndez",
-  },
-  {
-    id: 4,
-    participanteId: 4,
-    participante: participantesEjemplo[3],
-    fecha: "2023-05-17",
-    hora: "09:00",
-    motivoConsulta: "Reacción alérgica cutánea",
-    sintomas: ["Erupción cutánea", "Prurito", "Enrojecimiento"],
-    signos: {
-      temperatura: "36.5",
-      presionArterial: "115/75",
-      frecuenciaCardiaca: "82",
-      frecuenciaRespiratoria: "16",
-      saturacionOxigeno: "98",
-    },
-    diagnosticos: [
-      { codigo: "L23", descripcion: "Dermatitis alérgica de contacto" },
-    ],
-    tratamiento: "Evitar alérgeno y medicamentos",
-    medicamentos: [
-      {
-        nombre: "Loratadina",
-        dosis: "10mg",
-        frecuencia: "Cada 24 horas",
-        duracion: "7 días",
-      },
-      {
-        nombre: "Crema con hidrocortisona",
-        dosis: "Aplicación tópica",
-        frecuencia: "Cada 12 horas",
-        duracion: "5 días",
-      },
-    ],
-    indicaciones: "Evitar el contacto con el alérgeno identificado",
-    seguimiento: true,
-    fechaSeguimiento: "2023-05-24",
-    medico: "Dra. Carmen Jiménez",
-  },
-  {
-    id: 5,
-    participanteId: 5,
-    participante: participantesEjemplo[4],
-    fecha: "2023-05-17",
-    hora: "10:30",
-    motivoConsulta: "Dolor lumbar tras actividad física",
-    sintomas: ["Dolor lumbar", "Dificultad para moverse", "Rigidez"],
-    signos: {
-      temperatura: "36.7",
-      presionArterial: "125/80",
-      frecuenciaCardiaca: "75",
-      frecuenciaRespiratoria: "16",
-      saturacionOxigeno: "98",
-    },
-    diagnosticos: [{ codigo: "M54.5", descripcion: "Lumbago no especificado" }],
-    tratamiento: "Reposo relativo, compresas calientes y medicamentos",
-    medicamentos: [
-      {
-        nombre: "Diclofenaco",
-        dosis: "50mg",
-        frecuencia: "Cada 8 horas",
-        duracion: "5 días",
-      },
-      {
-        nombre: "Metocarbamol",
-        dosis: "750mg",
-        frecuencia: "Cada 8 horas",
-        duracion: "5 días",
-      },
-    ],
-    indicaciones:
-      "Reposo relativo, evitar cargar peso, aplicar compresas calientes",
-    seguimiento: false,
-    medico: "Dr. Roberto Méndez",
-  },
-  {
-    id: 6,
-    participanteId: 1,
-    participante: participantesEjemplo[0],
-    fecha: "2023-05-20",
-    hora: "15:45",
-    motivoConsulta: "Control de faringitis",
-    sintomas: ["Mejora de síntomas", "Leve dolor de garganta"],
-    signos: {
-      temperatura: "36.8",
-      presionArterial: "118/78",
-      frecuenciaCardiaca: "72",
-      frecuenciaRespiratoria: "16",
-      saturacionOxigeno: "99",
-    },
-    diagnosticos: [
-      { codigo: "J02.9", descripcion: "Faringitis aguda, no especificada" },
-    ],
-    tratamiento: "Continuar hidratación",
-    medicamentos: [],
-    indicaciones: "Alta médica, retomar actividades normales",
-    seguimiento: false,
-    medico: "Dra. Carmen Jiménez",
-  },
-];
-
+interface AtencionMedica {
+  id_salud: number;
+  fecha_consulta: string;
+  motivo_consulta: string;
+  tratamiento: string;
+  seguimiento: number; // 0 o 1
+  fecha_seguimiento: string | null;
+  datos: {
+    id: number;
+    nombre_completo: string;
+  };
+  medicinas_recetadas: MedicamentoRecetado[];
+}
+interface Participante {
+  id: number;
+  name: string;
+}
 export default function HistorialAtencionesPage() {
   const router = useRouter();
   const [busqueda, setBusqueda] = useState("");
   const [filtroFecha, setFiltroFecha] = useState("");
-  const [filtroCompania, setFiltroCompania] = useState("all");
-  const [filtroDiagnostico, setFiltroDiagnostico] = useState("all");
-  const [filtroMedico, setFiltroMedico] = useState("all");
+  const [filtroFechaSeguimiento, setFiltroFechaSeguimiento] = useState("");
   const [ordenarPor, setOrdenarPor] = useState("fecha-desc");
   const [atencionSeleccionada, setAtencionSeleccionada] =
     useState<AtencionMedica | null>(null);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
-  const [mostrarDetalles, setMostrarDetalles] = useState(false); // Nuevo estado para el panel de detalles
-  const [atencionesFiltradas, setAtencionesFiltradas] =
-    useState<AtencionMedica[]>(historialAtenciones);
-
+  const [mostrarDetalles, setMostrarDetalles] = useState(false);
+  const [atencionesOriginales, setAtencionesOriginales] = useState<
+    AtencionMedica[]
+  >([]);
+  const [atencionesFiltradas, setAtencionesFiltradas] = useState<
+    AtencionMedica[]
+  >([]);
+  const [participantes, setParticipantes] = useState<Participante[]>([]);
   const [showMenu, setShowMenu] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const isMobile = useMobile();
-
-  // Obtener lista de compañías únicas
-  const companias = Array.from(
-    new Set(participantesEjemplo.map((p) => p.compania))
-  );
-
-  // Obtener lista de diagnósticos únicos
-  const diagnosticos = Array.from(
-    new Set(
-      historialAtenciones.flatMap((a) => a.diagnosticos.map((d) => d.codigo))
-    )
-  );
-
-  // Obtener lista de médicos únicos
-  const medicos = Array.from(new Set(historialAtenciones.map((a) => a.medico)));
-
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const historial = await getHistorialAtenciones();
+        const parts = await getParticipantes();
+        setAtencionesOriginales(historial);
+        setParticipantes(parts);
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+      }
+    };
+    fetchData();
+  }, []);
   // Aplicar filtros y ordenamiento
   useEffect(() => {
-    let resultado = [...historialAtenciones];
-
+    let resultado = [...atencionesOriginales];
     // Filtro por búsqueda (nombre del participante o motivo de consulta)
     if (busqueda) {
       const busquedaLower = busqueda.toLowerCase();
       resultado = resultado.filter(
         (a) =>
-          a.participante.nombre.toLowerCase().includes(busquedaLower) ||
-          a.motivoConsulta.toLowerCase().includes(busquedaLower)
+          a.datos.nombre_completo.toLowerCase().includes(busquedaLower) ||
+          a.motivo_consulta.toLowerCase().includes(busquedaLower)
       );
     }
-
-    // Filtro por fecha
+    // Filtro por fecha de consulta
     if (filtroFecha) {
-      resultado = resultado.filter((a) => a.fecha === filtroFecha);
-    }
-
-    // Filtro por compañía
-    if (filtroCompania !== "all") {
-      resultado = resultado.filter(
-        (a) => a.participante.compania === filtroCompania
-      );
-    }
-
-    // Filtro por diagnóstico
-    if (filtroDiagnostico !== "all") {
       resultado = resultado.filter((a) =>
-        a.diagnosticos.some((d) => d.codigo === filtroDiagnostico)
+        a.fecha_consulta.startsWith(filtroFecha)
       );
     }
-
-    // Filtro por médico
-    if (filtroMedico !== "all") {
-      resultado = resultado.filter((a) => a.medico === filtroMedico);
+    // Filtro por fecha de seguimiento
+    if (filtroFechaSeguimiento) {
+      resultado = resultado.filter(
+        (a) =>
+          a.seguimiento === 1 &&
+          a.fecha_seguimiento &&
+          a.fecha_seguimiento.startsWith(filtroFechaSeguimiento)
+      );
     }
-
     // Ordenamiento
     switch (ordenarPor) {
       case "fecha-desc":
         resultado.sort((a, b) => {
-          const dateA = new Date(`${a.fecha}T${a.hora}`).getTime();
-          const dateB = new Date(`${b.fecha}T${b.hora}`).getTime();
+          const dateA = new Date(a.fecha_consulta).getTime();
+          const dateB = new Date(b.fecha_consulta).getTime();
           return dateB - dateA;
         });
         break;
       case "fecha-asc":
         resultado.sort((a, b) => {
-          const dateA = new Date(`${a.fecha}T${a.hora}`).getTime();
-          const dateB = new Date(`${b.fecha}T${b.hora}`).getTime();
+          const dateA = new Date(a.fecha_consulta).getTime();
+          const dateB = new Date(b.fecha_consulta).getTime();
           return dateA - dateB;
         });
         break;
       case "nombre-asc":
         resultado.sort((a, b) =>
-          a.participante.nombre.localeCompare(b.participante.nombre)
+          a.datos.nombre_completo.localeCompare(b.datos.nombre_completo)
         );
         break;
       case "nombre-desc":
         resultado.sort((a, b) =>
-          b.participante.nombre.localeCompare(a.participante.nombre)
+          b.datos.nombre_completo.localeCompare(a.datos.nombre_completo)
         );
         break;
+      case "seguimiento-desc":
+        resultado.sort((a, b) => {
+          const dateA = a.fecha_seguimiento
+            ? new Date(a.fecha_seguimiento).getTime()
+            : 0;
+          const dateB = b.fecha_seguimiento
+            ? new Date(b.fecha_seguimiento).getTime()
+            : 0;
+          return dateB - dateA;
+        });
+        break;
+      case "seguimiento-asc":
+        resultado.sort((a, b) => {
+          const dateA = a.fecha_seguimiento
+            ? new Date(a.fecha_seguimiento).getTime()
+            : 0;
+          const dateB = b.fecha_seguimiento
+            ? new Date(b.fecha_seguimiento).getTime()
+            : 0;
+          return dateA - dateB;
+        });
+        break;
     }
-
     setAtencionesFiltradas(resultado);
   }, [
     busqueda,
     filtroFecha,
-    filtroCompania,
-    filtroDiagnostico,
-    filtroMedico,
+    filtroFechaSeguimiento,
     ordenarPor,
+    atencionesOriginales,
+    participantes,
   ]);
-
-  // Formatear fecha
-  const formatearFecha = (fecha: string) => {
-    const [year, month, day] = fecha.split("-");
+  // Formatear fecha y hora
+  const formatearFecha = (isoString: string) => {
+    const date = new Date(isoString);
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0"); // Month is 0-indexed
+    const year = date.getUTCFullYear();
     return `${day}/${month}/${year}`;
   };
-
+  const formatearHora = (isoString: string) => {
+    const date = new Date(isoString);
+    const hours = String(date.getUTCHours()).padStart(2, "0");
+    const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
   // Limpiar filtros
   const limpiarFiltros = () => {
     setBusqueda("");
     setFiltroFecha("");
-    setFiltroCompania("all");
-    setFiltroDiagnostico("all");
-    setFiltroMedico("all");
+    setFiltroFechaSeguimiento("");
     setOrdenarPor("fecha-desc");
     setMostrarFiltros(false);
   };
-
   // Ver detalles de una atención
   const verDetalles = (atencion: AtencionMedica) => {
     setAtencionSeleccionada(atencion);
-    setMostrarDetalles(true); // Mostrar el panel de detalles
+    setMostrarDetalles(true);
   };
-
   // Ir a nueva atención
   const nuevaAtencion = () => {
     router.push("/atencion-medica");
   };
-
+  // Ir al registro del participante
+  const irARegistro = (id: number) => {
+    router.push(`/registro/${id}`);
+  };
   // Radial menu handlers
   const handleRightClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setPosition({ x: e.clientX, y: e.clientY });
     setShowMenu(true);
   };
-
   const handleOptionSelect = (option: string) => {
     setSelectedOption(option);
     setShowMenu(false);
-
-    // Redireccionar según la opción seleccionada
     if (option === "registration") {
       nuevaAtencion();
     }
   };
-
   const handleMobileMenuOpen = () => {
-    // En móviles, posicionamos el menú en el centro de la pantalla
     if (typeof window !== "undefined") {
       setPosition({
         x: window.innerWidth / 2,
@@ -498,7 +248,6 @@ export default function HistorialAtencionesPage() {
     }
     setShowMenu(true);
   };
-
   // Radial menu options
   const menuOptions = [
     { id: "companies", label: "Compañía", icon: "Users" },
@@ -509,7 +258,6 @@ export default function HistorialAtencionesPage() {
     { id: "statistics", label: "Stats", icon: "BarChart2" },
     { id: "inventory", label: "Inventario", icon: "Package" },
   ];
-
   return (
     <main
       className="flex min-h-screen flex-col items-center bg-slate-50 pb-10"
@@ -525,18 +273,19 @@ export default function HistorialAtencionesPage() {
             Historial de Atenciones
           </h1>
         </div>
-        <Button variant="secondary" size="sm" onClick={nuevaAtencion}>
-          Nueva Atención
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => router.push("/inventario-medicamentos")}
-        >
-          Inventario
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={nuevaAtencion}>
+            Nueva Atención
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => router.push("/inventario-medicamentos")}
+          >
+            Inventario
+          </Button>
+        </div>
       </div>
-
       {/* Barra de búsqueda y filtros */}
       <div className="container max-w-7xl px-4 mt-4">
         <div className="flex gap-2 mb-4">
@@ -571,70 +320,16 @@ export default function HistorialAtencionesPage() {
                     onChange={(e) => setFiltroFecha(e.target.value)}
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Compañía</label>
-                  <Select
-                    value={filtroCompania}
-                    onValueChange={setFiltroCompania}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar compañía" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      {companias.map((compania) => (
-                        <SelectItem key={compania} value={compania}>
-                          Compañía {compania}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <label className="text-sm font-medium">
+                    Fecha de Seguimiento
+                  </label>
+                  <Input
+                    type="date"
+                    value={filtroFechaSeguimiento}
+                    onChange={(e) => setFiltroFechaSeguimiento(e.target.value)}
+                  />
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Diagnóstico</label>
-                  <Select
-                    value={filtroDiagnostico}
-                    onValueChange={setFiltroDiagnostico}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar diagnóstico" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {diagnosticos.map((codigo) => {
-                        const diagnostico = historialAtenciones
-                          .flatMap((a) => a.diagnosticos)
-                          .find((d) => d.codigo === codigo);
-                        return (
-                          <SelectItem key={codigo} value={codigo}>
-                            {codigo} -{" "}
-                            {diagnostico?.descripcion.substring(0, 20)}...
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Médico</label>
-                  <Select value={filtroMedico} onValueChange={setFiltroMedico}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar médico" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {medicos.map((medico) => (
-                        <SelectItem key={medico} value={medico}>
-                          {medico}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Ordenar por</label>
                   <Select value={ordenarPor} onValueChange={setOrdenarPor}>
@@ -650,10 +345,15 @@ export default function HistorialAtencionesPage() {
                       </SelectItem>
                       <SelectItem value="nombre-asc">Nombre (A-Z)</SelectItem>
                       <SelectItem value="nombre-desc">Nombre (Z-A)</SelectItem>
+                      <SelectItem value="seguimiento-desc">
+                        Fecha Seguimiento (más reciente)
+                      </SelectItem>
+                      <SelectItem value="seguimiento-asc">
+                        Fecha Seguimiento (más antigua)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="flex justify-between pt-4">
                   <Button variant="outline" onClick={limpiarFiltros}>
                     Limpiar filtros
@@ -666,16 +366,12 @@ export default function HistorialAtencionesPage() {
             </SheetContent>
           </Sheet>
         </div>
-
         {/* Resumen de filtros aplicados */}
-        {(filtroFecha ||
-          filtroCompania !== "all" ||
-          filtroDiagnostico !== "all" ||
-          filtroMedico !== "all") && (
+        {(filtroFecha || filtroFechaSeguimiento) && (
           <div className="flex flex-wrap gap-2 mb-4">
             {filtroFecha && (
               <Badge variant="secondary" className="pl-2 pr-1 py-1">
-                {formatearFecha(filtroFecha)}
+                Fecha Consulta: {formatearFecha(filtroFecha)}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -686,40 +382,14 @@ export default function HistorialAtencionesPage() {
                 </Button>
               </Badge>
             )}
-            {filtroCompania !== "all" && (
+            {filtroFechaSeguimiento && (
               <Badge variant="secondary" className="pl-2 pr-1 py-1">
-                Compañía {filtroCompania}
+                Fecha Seguimiento: {formatearFecha(filtroFechaSeguimiento)}
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-5 w-5 p-0 ml-1"
-                  onClick={() => setFiltroCompania("all")}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            )}
-            {filtroDiagnostico !== "all" && (
-              <Badge variant="secondary" className="pl-2 pr-1 py-1">
-                {filtroDiagnostico}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 w-5 p-0 ml-1"
-                  onClick={() => setFiltroDiagnostico("all")}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            )}
-            {filtroMedico !== "all" && (
-              <Badge variant="secondary" className="pl-2 pr-1 py-1">
-                {filtroMedico}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 w-5 p-0 ml-1"
-                  onClick={() => setFiltroMedico("all")}
+                  onClick={() => setFiltroFechaSeguimiento("")}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -727,7 +397,6 @@ export default function HistorialAtencionesPage() {
             )}
           </div>
         )}
-
         {/* Ordenamiento visible */}
         <div className="flex justify-between items-center mb-4 text-sm text-slate-500">
           <span>{atencionesFiltradas.length} atenciones</span>
@@ -742,17 +411,22 @@ export default function HistorialAtencionesPage() {
                 <SelectItem value="fecha-asc">Fecha (más antigua)</SelectItem>
                 <SelectItem value="nombre-asc">Nombre (A-Z)</SelectItem>
                 <SelectItem value="nombre-desc">Nombre (Z-A)</SelectItem>
+                <SelectItem value="seguimiento-desc">
+                  Fecha Seguimiento (más reciente)
+                </SelectItem>
+                <SelectItem value="seguimiento-asc">
+                  Fecha Seguimiento (más antigua)
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
-
         {/* Lista de atenciones */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {atencionesFiltradas.length > 0 ? (
             atencionesFiltradas.map((atencion) => (
               <Card
-                key={atencion.id}
+                key={atencion.id_salud} // Cambiado a id_salud
                 className="cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => verDetalles(atencion)}
               >
@@ -762,26 +436,28 @@ export default function HistorialAtencionesPage() {
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 text-slate-500 mr-1" />
                         <span className="text-sm text-slate-500">
-                          {formatearFecha(atencion.fecha)} • {atencion.hora}
+                          {formatearFecha(atencion.fecha_consulta)} •{" "}
+                          {formatearHora(atencion.fecha_consulta)}
                         </span>
                       </div>
                       <h3 className="font-medium mt-1">
-                        {atencion.participante.nombre}
+                        {atencion.datos.nombre_completo}
                       </h3>
                       <p className="text-sm text-slate-600 mt-1">
-                        {atencion.motivoConsulta}
+                        {atencion.motivo_consulta}
                       </p>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {atencion.diagnosticos.map((diagnostico, index) => (
-                          <Badge
-                            key={index}
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            {diagnostico.codigo}
-                          </Badge>
-                        ))}
-                      </div>
+                      {/* Mostrar fecha de seguimiento en el card si existe */}
+                      {atencion.seguimiento === 1 &&
+                        atencion.fecha_seguimiento && (
+                          <div className="flex items-center mt-2 text-sm text-slate-500">
+                            <Clock className="h-4 w-4 mr-1" />
+                            <span>
+                              Seguimiento:{" "}
+                              {formatearFecha(atencion.fecha_seguimiento)} •{" "}
+                              {formatearHora(atencion.fecha_seguimiento)}
+                            </span>
+                          </div>
+                        )}
                     </div>
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                   </div>
@@ -798,7 +474,6 @@ export default function HistorialAtencionesPage() {
             </div>
           )}
         </div>
-
         {/* Botón flotante para móviles (Radial Menu) */}
         {isMobile && (
           <button
@@ -809,7 +484,6 @@ export default function HistorialAtencionesPage() {
             <Send className="w-6 h-6 text-white" />
           </button>
         )}
-
         {/* Radial Menu */}
         {showMenu && (
           <RadialMenu
@@ -821,7 +495,6 @@ export default function HistorialAtencionesPage() {
           />
         )}
       </div>
-
       {/* Panel flotante de detalles de atención */}
       <Dialog open={mostrarDetalles} onOpenChange={setMostrarDetalles}>
         <DialogContent className="sm:max-w-[425px]">
@@ -833,40 +506,67 @@ export default function HistorialAtencionesPage() {
           </DialogHeader>
           {atencionSeleccionada && (
             <div className="space-y-4 py-4 text-sm">
-              <p>
+              <div>
                 <strong>Participante:</strong>{" "}
-                {atencionSeleccionada.participante.nombre}
-              </p>
+                <Button
+                  variant="link"
+                  className="p-0 h-auto font-normal text-left"
+                  onClick={() => irARegistro(atencionSeleccionada.datos.id)}
+                >
+                  {atencionSeleccionada.datos.nombre_completo}
+                </Button>
+              </div>
               <p>
                 <strong>Fecha de Consulta:</strong>{" "}
-                {formatearFecha(atencionSeleccionada.fecha)} a las{" "}
-                {atencionSeleccionada.hora}
+                {formatearFecha(atencionSeleccionada.fecha_consulta)} a las{" "}
+                {formatearHora(atencionSeleccionada.fecha_consulta)}
               </p>
               <p>
                 <strong>Motivo de Consulta:</strong>{" "}
-                {atencionSeleccionada.motivoConsulta}
+                {atencionSeleccionada.motivo_consulta}
               </p>
               <p>
                 <strong>Tratamiento:</strong> {atencionSeleccionada.tratamiento}
               </p>
               <p>
                 <strong>Seguimiento:</strong>{" "}
-                {atencionSeleccionada.seguimiento
-                  ? `Sí, el ${formatearFecha(
-                      atencionSeleccionada.fechaSeguimiento || ""
-                    )}`
-                  : "No"}
+                {atencionSeleccionada.seguimiento === 1 ? `Sí` : "No"}
               </p>
-              {atencionSeleccionada.medicamentos.length > 0 && (
+              {/* Mostrar fecha de seguimiento en el dialog si existe */}
+              {atencionSeleccionada.seguimiento === 1 &&
+                atencionSeleccionada.fecha_seguimiento && (
+                  <p>
+                    <strong>Fecha de Seguimiento:</strong>{" "}
+                    {formatearFecha(atencionSeleccionada.fecha_seguimiento)} a
+                    las {formatearHora(atencionSeleccionada.fecha_seguimiento)}
+                  </p>
+                )}
+              {atencionSeleccionada.medicinas_recetadas.length > 0 && (
                 <div>
                   <p className="font-medium mt-2">Medicamentos Recetados:</p>
                   <ul className="list-disc pl-5 space-y-1">
-                    {atencionSeleccionada.medicamentos.map((med, index) => (
-                      <li key={index}>
-                        {med.nombre} - {med.dosis} ({med.frecuencia},{" "}
-                        {med.duracion})
-                      </li>
-                    ))}
+                    {atencionSeleccionada.medicinas_recetadas.map(
+                      (med, index) => (
+                        <li key={index}>
+                          {med.inventario_salud.nombre}
+                          {med.inventario_salud.dosis &&
+                            ` - ${med.inventario_salud.dosis}`}
+                          {(med.frecuencia || med.duracion) && " ("}
+                          {med.frecuencia && (
+                            <>
+                              <b>Frecuencia:</b> {med.frecuencia}
+                              {med.duracion && ", "}
+                            </>
+                          )}
+                          {med.duracion && (
+                            <>
+                              <b>Duración:</b> {med.duracion}
+                            </>
+                          )}
+                          {(med.frecuencia || med.duracion) && ")"}
+                        </li>
+                      )
+                    )}
                   </ul>
                 </div>
               )}
