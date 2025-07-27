@@ -221,3 +221,36 @@ export const eliminarMedicamento = async (id: number) => {
     throw error;
   }
 };
+
+// Nueva función para actualizar un medicamento en el inventario
+export const actualizarMedicamento = async (
+  id: number,
+  nombre: string,
+  descripcion: string,
+  stock: number,
+  dosis: string | null
+) => {
+  try {
+    const response = await axios.put(`${BASE_URL}/salud/inv/${id}`, {
+      nombre,
+      descripcion,
+      stock,
+      dosis,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al actualizar el medicamento:", error);
+    throw error;
+  }
+};
+
+// Nueva función para registrar una atención médica
+export const registrarAtencion = async (data: any) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/salud/atencion/`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error al registrar la atención médica:", error);
+    throw error;
+  }
+};

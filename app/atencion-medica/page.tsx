@@ -35,7 +35,6 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandInput,
-  CommandItem,
   CommandList,
 } from "@/components/ui/command";
 import {
@@ -43,9 +42,24 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import gsap from "gsap";
-import { getParticipantesSalud } from "@/lib/connections";
+import {
+  getParticipantesSalud,
+  getInventarioMedicamentos, // Import getInventarioMedicamentos
+  registrarAtencion, // Import registrarAtencion
+} from "@/lib/connections";
 import { useDebounce } from "@/hooks/use-debounce";
 
 // Tipos de datos
@@ -60,6 +74,20 @@ interface Participante {
   trat_med: string;
   alergia_med: string;
 }
+interface MedicamentoSeleccionado {
+  id: number; // ID del medicamento del inventario
+  frecuencia: string; // Ej: "Cada 8 horas", "1 vez al dia"
+  duracion: string; // Ej: "7 dias", "1 semana"
+  unidadesDadas: number; // Cantidad de unidades dadas
+}
+
+interface Medication {
+  id_inventario_salud: number;
+  nombre: string;
+  descripcion: string;
+  stock: number;
+  dosis?: string | null;
+}
 
 interface AtencionMedica {
   participanteId: number | null;
@@ -67,12 +95,8 @@ interface AtencionMedica {
   hora: string;
   motivoConsulta: string;
   tratamiento: string;
-  medicamentos: {
-    nombre: string;
-    dosis: string;
-    frecuencia: string;
-    duracion: string;
-  }[];
+  // Cambiar el tipo de medicamentos
+  medicamentos: MedicamentoSeleccionado[];
   seguimiento: boolean;
   fechaSeguimiento?: string;
   horaSeguimiento?: string;
@@ -89,16 +113,13 @@ export default function AtencionMedicaPage() {
     useState<Participante | null>(null);
   const [mostrarBusquedaParticipante, setMostrarBusquedaParticipante] =
     useState(false);
-  const [medicamentoActual, setMedicamentoActual] = useState({
-    nombre: "",
-    dosis: "",
-    frecuencia: "",
-    duracion: "",
-  });
-  const [editandoMedicamento, setEditandoMedicamento] = useState<number | null>(
-    null
-  );
   const [seDioMedicamentos, setSeDioMedicamentos] = useState(false);
+  const [medications, setMedications] = useState<Medication[]>([]); // Medication inventory
+  const [busquedaMedicamento, setBusquedaMedicamento] = useState("");
+  const debouncedBusquedaMedicamento = useDebounce(busquedaMedicamento, 300);
+  const [mostarBusquedaMedicamento, setMostarBusquedaMedicamento] =
+    useState(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
   // Refs for step content animations
   const paso1Ref = useRef<HTMLDivElement>(null);
@@ -115,7 +136,17 @@ export default function AtencionMedicaPage() {
       }
     };
 
+    const fetchMedications = async () => {
+      try {
+        const data = await getInventarioMedicamentos();
+        setMedications(data as Medication[]);
+      } catch (error) {
+        toast.error("Error al cargar el inventario de medicamentos.");
+      }
+    };
+
     fetchParticipantes();
+    fetchMedications();
   }, []);
 
   // Clear medications if "Se le dio Medicamentos" is unchecked
@@ -138,7 +169,7 @@ export default function AtencionMedicaPage() {
     hora: new Date().toTimeString().split(" ")[0].substring(0, 5),
     motivoConsulta: "",
     tratamiento: "",
-    medicamentos: [],
+    medicamentos: [], // Array of medication IDs
     seguimiento: false,
     fechaSeguimiento: "",
     horaSeguimiento: "",
@@ -204,41 +235,20 @@ export default function AtencionMedicaPage() {
     toast.success(`Participante seleccionado: ${participante.nombres}`);
   };
 
-  // Agregar medicamento
-  const agregarMedicamento = () => {
-    if (
-      medicamentoActual.nombre.trim() !== "" &&
-      medicamentoActual.dosis.trim() !== "" &&
-      medicamentoActual.frecuencia.trim() !== ""
-    ) {
-      if (editandoMedicamento !== null) {
-        // Editar medicamento existente
-        const nuevosMedicamentos = [...atencion.medicamentos];
-        nuevosMedicamentos[editandoMedicamento] = { ...medicamentoActual };
-        setAtencion({ ...atencion, medicamentos: nuevosMedicamentos });
-        setEditandoMedicamento(null);
-      } else {
-        // Agregar nuevo medicamento
-        setAtencion({
-          ...atencion,
-          medicamentos: [...atencion.medicamentos, { ...medicamentoActual }],
-        });
-      }
-      setMedicamentoActual({
-        nombre: "",
-        dosis: "",
-        frecuencia: "",
-        duracion: "",
-      });
+  const agregarMedicamento = (id: number) => {
+    // Verificar si el medicamento ya está en la lista
+    if (!atencion.medicamentos.some((med) => med.id === id)) {
+      setAtencion((prev) => ({
+        ...prev,
+        medicamentos: [
+          ...prev.medicamentos,
+          { id, frecuencia: "", duracion: "", unidadesDadas: 0 }, // Agregar objeto con campos vacíos y unidadesDadas
+        ],
+      }));
+      setMostarBusquedaMedicamento(false); // Cerrar el selector de medicamentos
     } else {
-      toast.error("Complete los campos obligatorios del medicamento");
+      toast.error("Este medicamento ya fue agregado");
     }
-  };
-
-  // Editar medicamento
-  const editarMedicamento = (index: number) => {
-    setMedicamentoActual({ ...atencion.medicamentos[index] });
-    setEditandoMedicamento(index);
   };
 
   // Eliminar medicamento
@@ -247,7 +257,19 @@ export default function AtencionMedicaPage() {
     nuevosMedicamentos.splice(index, 1);
     setAtencion({ ...atencion, medicamentos: nuevosMedicamentos });
   };
-
+  // Nueva función para actualizar frecuencia o duracion
+  const actualizarMedicamento = (
+    index: number,
+    campo: keyof MedicamentoSeleccionado,
+    valor: string | number
+  ) => {
+    const nuevosMedicamentos = [...atencion.medicamentos];
+    if (nuevosMedicamentos[index]) {
+      // Aserción de tipo para evitar error de compilación en campo dinámico
+      (nuevosMedicamentos[index] as any)[campo] = valor;
+      setAtencion({ ...atencion, medicamentos: nuevosMedicamentos });
+    }
+  };
   // Avanzar al siguiente paso
   const siguientePaso = () => {
     // Validaciones según el paso actual
@@ -273,15 +295,17 @@ export default function AtencionMedicaPage() {
     }
   };
 
-  // Enviar formulario
-  const enviarFormulario = () => {
-    // Validación final
+  // Función para mostrar el panel de confirmación
+  const handleGuardarAtencion = () => {
     if (atencion.tratamiento.trim() === "") {
-      toast.error("Debe ingresar el tratamiento");
+      toast.error("Debe ingresar el diagnóstico");
       return;
     }
+    setMostrarConfirmacion(true);
+  };
 
-    // Aquí iría la lógica para enviar los datos al servidor
+  // Enviar formulario (lógica real de envío)
+  const enviarFormularioConfirmado = async () => {
     const {
       fecha,
       hora,
@@ -301,14 +325,19 @@ export default function AtencionMedicaPage() {
         `${fechaSeguimiento}T${horaSeguimiento}`
       );
     }
-    console.log("Datos de atención médica:", dataToSend);
-    toast.success("Atención médica registrada correctamente");
-
-    // Simular envío exitoso
-    setTimeout(() => {
-      router.push("/");
-    }, 2000);
+    try {
+      await registrarAtencion(dataToSend);
+      toast.success("Atención médica registrada correctamente");
+      router.push("/historial-atenciones");
+    } catch (error) {
+      toast.error("Error al registrar la atención médica.");
+      console.error("Error al enviar datos:", error);
+    }
   };
+
+  const medicamentosFiltrados = medications.filter((m) =>
+    m.nombre.toLowerCase().includes(debouncedBusquedaMedicamento.toLowerCase())
+  );
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-slate-50 pb-10">
@@ -653,135 +682,194 @@ export default function AtencionMedicaPage() {
 
                 {seDioMedicamentos && (
                   <div className="space-y-3">
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="nombreMedicamento">Nombre</Label>
-                          <Input
-                            id="nombreMedicamento"
-                            placeholder="Nombre del medicamento"
-                            value={medicamentoActual.nombre}
-                            onChange={(e) =>
-                              setMedicamentoActual({
-                                ...medicamentoActual,
-                                nombre: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="dosisMedicamento">Dosis</Label>
-                          <Input
-                            id="dosisMedicamento"
-                            placeholder="Ej: 500mg"
-                            value={medicamentoActual.dosis}
-                            onChange={(e) =>
-                              setMedicamentoActual({
-                                ...medicamentoActual,
-                                dosis: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="frecuenciaMedicamento">
-                            Frecuencia
-                          </Label>
-                          <Input
-                            id="frecuenciaMedicamento"
-                            placeholder="Ej: Cada 8 horas"
-                            value={medicamentoActual.frecuencia}
-                            onChange={(e) =>
-                              setMedicamentoActual({
-                                ...medicamentoActual,
-                                frecuencia: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="duracionMedicamento">Duración</Label>
-                          <Input
-                            id="duracionMedicamento"
-                            placeholder="Ej: 7 días"
-                            value={medicamentoActual.duracion}
-                            onChange={(e) =>
-                              setMedicamentoActual({
-                                ...medicamentoActual,
-                                duracion: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
+                    <div className="relative">
                       <Button
-                        type="button"
-                        variant="secondary"
-                        className="w-full"
-                        onClick={agregarMedicamento}
+                        variant="outline"
+                        className="w-full justify-start h-auto py-3 text-left"
+                        onClick={() =>
+                          setMostarBusquedaMedicamento(
+                            !mostarBusquedaMedicamento
+                          )
+                        } // Toggle the state
                       >
-                        {editandoMedicamento !== null
-                          ? "Actualizar Medicamento"
-                          : "Agregar Medicamento"}
+                        <Search className="h-4 w-4 mr-2 opacity-50" />
+                        {atencion.medicamentos.length > 0
+                          ? "Medicamentos Agregados"
+                          : "Buscar Medicamento..."}
                       </Button>
+
+                      {mostarBusquedaMedicamento && (
+                        <Card className="absolute top-full left-0 right-0 mt-1 z-10">
+                          <CardHeader className="py-2">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Buscar por nombre..."
+                                className="pl-8"
+                                value={busquedaMedicamento}
+                                onChange={(e) =>
+                                  setBusquedaMedicamento(e.target.value)
+                                }
+                              />
+                            </div>
+                          </CardHeader>
+                          <CardContent className="max-h-64 overflow-y-auto py-2">
+                            {medicamentosFiltrados.length > 0 ? (
+                              <>
+                                <div className="space-y-1">
+                                  {medicamentosFiltrados.map((medicamento) => (
+                                    <div
+                                      key={medicamento.id_inventario_salud}
+                                      className="flex items-center justify-between p-2 rounded-md hover:bg-slate-100 cursor-pointer"
+                                      onClick={() =>
+                                        agregarMedicamento(
+                                          medicamento.id_inventario_salud
+                                        )
+                                      }
+                                    >
+                                      <div>
+                                        <p className="font-medium">
+                                          {medicamento.nombre}
+                                        </p>
+                                        <div className="flex items-center text-sm text-slate-500">
+                                          <span>
+                                            Stock: {medicamento.stock}
+                                          </span>
+                                          <span className="mx-1">•</span>
+                                          <span>
+                                            Dosis:{" "}
+                                            {medicamento.dosis
+                                              ? medicamento.dosis
+                                              : "N/A"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <Check className="h-5 w-5 text-blue-600 opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="py-3 text-center text-sm text-slate-500">
+                                No se encontraron medicamentos
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
                     </div>
 
                     <div className="space-y-2 mt-4">
                       {atencion.medicamentos.length > 0 ? (
                         <div className="space-y-2">
-                          {atencion.medicamentos.map((medicamento, index) => (
-                            <div
-                              key={index}
-                              className="bg-slate-50 p-3 rounded-md border border-slate-200"
-                            >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="font-medium">
-                                    {medicamento.nombre}
-                                  </p>
-                                  <p className="text-sm text-slate-600">
-                                    {medicamento.dosis} -{" "}
-                                    {medicamento.frecuencia}
-                                    {medicamento.duracion &&
-                                      ` - ${medicamento.duracion}`}
-                                  </p>
-                                </div>
-                                <div className="flex space-x-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => editarMedicamento(index)}
-                                  >
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      width="15"
-                                      height="15"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
+                          {atencion.medicamentos.map(
+                            (medSeleccionado, index) => {
+                              // Buscar el objeto completo del medicamento en base al ID
+                              const medicamentoCompleto = medications.find(
+                                (m) =>
+                                  m.id_inventario_salud === medSeleccionado.id
+                              );
+                              if (!medicamentoCompleto) return null; // O manejar el caso donde no se encuentra
+
+                              return (
+                                <div
+                                  key={`${medSeleccionado.id}-${index}`} // Key único basado en ID e índice
+                                  className="bg-slate-50 p-3 rounded-md border border-slate-200"
+                                >
+                                  <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                      <p className="font-medium">
+                                        {medicamentoCompleto.nombre}
+                                      </p>
+                                      <p className="text-sm text-slate-600">
+                                        Stock: {medicamentoCompleto.stock} •
+                                        Dosis:{" "}
+                                        {medicamentoCompleto.dosis
+                                          ? medicamentoCompleto.dosis
+                                          : "N/A"}
+                                      </p>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => eliminarMedicamento(index)}
                                     >
-                                      <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
-                                      <path d="m15 5 4 4"></path>
-                                    </svg>
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => eliminarMedicamento(index)}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <Label
+                                        htmlFor={`frecuencia-${index}`}
+                                        className="text-xs"
+                                      >
+                                        Frecuencia
+                                      </Label>
+                                      <Input
+                                        id={`frecuencia-${index}`}
+                                        type="text"
+                                        placeholder="Ej: Cada 8 horas"
+                                        value={medSeleccionado.frecuencia}
+                                        onChange={(e) =>
+                                          actualizarMedicamento(
+                                            index,
+                                            "frecuencia",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="text-sm h-8"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label
+                                        htmlFor={`duracion-${index}`}
+                                        className="text-xs"
+                                      >
+                                        Duración
+                                      </Label>
+                                      <Input
+                                        id={`duracion-${index}`}
+                                        type="text"
+                                        placeholder="Ej: 7 días"
+                                        value={medSeleccionado.duracion}
+                                        onChange={(e) =>
+                                          actualizarMedicamento(
+                                            index,
+                                            "duracion",
+                                            e.target.value
+                                          )
+                                        }
+                                        className="text-sm h-8"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label
+                                        htmlFor={`unidades-dadas-${index}`}
+                                        className="text-xs"
+                                      >
+                                        Unidades Dadas
+                                      </Label>
+                                      <Input
+                                        id={`unidades-dadas-${index}`}
+                                        type="number"
+                                        placeholder="Ej: 10"
+                                        value={medSeleccionado.unidadesDadas}
+                                        onChange={(e) =>
+                                          actualizarMedicamento(
+                                            index,
+                                            "unidadesDadas",
+                                            parseInt(e.target.value) || 0
+                                          )
+                                        }
+                                        className="text-sm h-8"
+                                      />
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          ))}
+                              );
+                            }
+                          )}
                         </div>
                       ) : (
                         <div className="text-center py-4 text-sm text-slate-500 bg-slate-50 rounded-md border border-slate-200">
@@ -852,13 +940,75 @@ export default function AtencionMedicaPage() {
               <Button variant="outline" size="lg" onClick={pasoAnterior}>
                 Atrás
               </Button>
-              <Button size="lg" onClick={enviarFormulario}>
+              <Button size="lg" onClick={handleGuardarAtencion}>
                 Guardar Atención
               </Button>
             </CardFooter>
           </Card>
         )}
       </div>
+
+      {/* Panel de Confirmación */}
+      <AlertDialog
+        open={mostrarConfirmacion}
+        onOpenChange={setMostrarConfirmacion}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Atención Médica</AlertDialogTitle>
+            <AlertDialogDescription>
+              Por favor, revise cuidadosamente toda la información ingresada.
+              Una vez confirmada, la atención será registrada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 text-sm">
+            <p>
+              <strong>Participante:</strong> {participanteSeleccionado?.nombres}
+            </p>
+            <p>
+              <strong>Fecha y Hora:</strong> {atencion.fecha} {atencion.hora}
+            </p>
+            <p>
+              <strong>Motivo de Consulta:</strong> {atencion.motivoConsulta}
+            </p>
+            <p>
+              <strong>Diagnóstico:</strong> {atencion.tratamiento}
+            </p>
+            {atencion.medicamentos.length > 0 && (
+              <div>
+                <p>
+                  <strong>Medicamentos:</strong>
+                </p>
+                <ul className="list-disc pl-5">
+                  {atencion.medicamentos.map((med, index) => {
+                    const medInfo = medications.find(
+                      (m) => m.id_inventario_salud === med.id
+                    );
+                    return (
+                      <li key={index}>
+                        {medInfo?.nombre} - Frecuencia: {med.frecuencia},
+                        Duración: {med.duracion}, Unidades: {med.unidadesDadas}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+            {atencion.seguimiento && (
+              <p>
+                <strong>Seguimiento:</strong> Sí, el {atencion.fechaSeguimiento}{" "}
+                a las {atencion.horaSeguimiento}
+              </p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={enviarFormularioConfirmado}>
+              Confirmar y Guardar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

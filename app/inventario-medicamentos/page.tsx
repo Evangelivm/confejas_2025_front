@@ -47,6 +47,7 @@ import {
   agregarMedicamento,
   getInventarioMedicamentos,
   eliminarMedicamento,
+  actualizarMedicamento,
 } from "@/lib/connections";
 
 interface Medication {
@@ -171,7 +172,7 @@ export default function InventarioMedicamentos() {
     setIsDialogOpen(true);
   };
 
-  const saveEditedMedication = () => {
+  const saveEditedMedication = async () => {
     if (editingMedication) {
       if (editingMedication.nombre.trim() === "") {
         toast({
@@ -203,26 +204,42 @@ export default function InventarioMedicamentos() {
         });
         return;
       }
-      setMedications(
-        medications.map((med) =>
-          med.id_inventario_salud === editingMedication.id_inventario_salud
-            ? {
-                ...editingMedication,
-                nombre: editingMedication.nombre.trim(),
-                descripcion: editingMedication.descripcion.trim(),
-                dosis: editingMedicationIsDose
-                  ? editingMedicationDose.trim()
-                  : null,
-              }
-            : med
-        )
-      );
-      toast({
-        title: "Éxito",
-        description: `"${editingMedication.nombre}" ha sido actualizada.`,
-      });
-      setEditingMedication(null);
-      setIsDialogOpen(false);
+      try {
+        await actualizarMedicamento(
+          editingMedication.id_inventario_salud,
+          editingMedication.nombre.trim(),
+          editingMedication.descripcion.trim(),
+          editingMedication.stock,
+          editingMedicationIsDose ? editingMedicationDose.trim() : null
+        );
+        // Update the local state after successful update from the server
+        setMedications(
+          medications.map((med) =>
+            med.id_inventario_salud === editingMedication.id_inventario_salud
+              ? {
+                  ...editingMedication,
+                  nombre: editingMedication.nombre.trim(),
+                  descripcion: editingMedication.descripcion.trim(),
+                  dosis: editingMedicationIsDose
+                    ? editingMedicationDose.trim()
+                    : null,
+                }
+              : med
+          )
+        );
+        toast({
+          title: "Éxito",
+          description: `"${editingMedication.nombre}" ha sido actualizada.`,
+        });
+        setEditingMedication(null);
+        setIsDialogOpen(false);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Error al actualizar el medicamento.",
+          variant: "destructive",
+        });
+      }
     }
   };
 

@@ -34,6 +34,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import RadialMenu from "@/components/radial-menu";
 
@@ -334,6 +343,7 @@ export default function HistorialAtencionesPage() {
   const [atencionSeleccionada, setAtencionSeleccionada] =
     useState<AtencionMedica | null>(null);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [mostrarDetalles, setMostrarDetalles] = useState(false); // Nuevo estado para el panel de detalles
   const [atencionesFiltradas, setAtencionesFiltradas] =
     useState<AtencionMedica[]>(historialAtenciones);
 
@@ -453,6 +463,7 @@ export default function HistorialAtencionesPage() {
   // Ver detalles de una atención
   const verDetalles = (atencion: AtencionMedica) => {
     setAtencionSeleccionada(atencion);
+    setMostrarDetalles(true); // Mostrar el panel de detalles
   };
 
   // Ir a nueva atención
@@ -527,7 +538,7 @@ export default function HistorialAtencionesPage() {
       </div>
 
       {/* Barra de búsqueda y filtros */}
-      <div className="container max-w-md px-4 mt-4">
+      <div className="container max-w-7xl px-4 mt-4">
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -737,7 +748,7 @@ export default function HistorialAtencionesPage() {
         </div>
 
         {/* Lista de atenciones */}
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {atencionesFiltradas.length > 0 ? (
             atencionesFiltradas.map((atencion) => (
               <Card
@@ -778,7 +789,7 @@ export default function HistorialAtencionesPage() {
               </Card>
             ))
           ) : (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-slate-500 col-span-full">
               <FileText className="h-12 w-12 mx-auto text-slate-300 mb-2" />
               <p>No se encontraron atenciones médicas</p>
               <p className="text-sm mt-1">
@@ -810,6 +821,66 @@ export default function HistorialAtencionesPage() {
           />
         )}
       </div>
+
+      {/* Panel flotante de detalles de atención */}
+      <Dialog open={mostrarDetalles} onOpenChange={setMostrarDetalles}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Detalles de Atención Médica</DialogTitle>
+            <DialogDescription>
+              Información completa de la atención registrada.
+            </DialogDescription>
+          </DialogHeader>
+          {atencionSeleccionada && (
+            <div className="space-y-4 py-4 text-sm">
+              <p>
+                <strong>Participante:</strong>{" "}
+                {atencionSeleccionada.participante.nombre}
+              </p>
+              <p>
+                <strong>Fecha de Consulta:</strong>{" "}
+                {formatearFecha(atencionSeleccionada.fecha)} a las{" "}
+                {atencionSeleccionada.hora}
+              </p>
+              <p>
+                <strong>Motivo de Consulta:</strong>{" "}
+                {atencionSeleccionada.motivoConsulta}
+              </p>
+              <p>
+                <strong>Tratamiento:</strong> {atencionSeleccionada.tratamiento}
+              </p>
+              <p>
+                <strong>Seguimiento:</strong>{" "}
+                {atencionSeleccionada.seguimiento
+                  ? `Sí, el ${formatearFecha(
+                      atencionSeleccionada.fechaSeguimiento || ""
+                    )}`
+                  : "No"}
+              </p>
+              {atencionSeleccionada.medicamentos.length > 0 && (
+                <div>
+                  <p className="font-medium mt-2">Medicamentos Recetados:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {atencionSeleccionada.medicamentos.map((med, index) => (
+                      <li key={index}>
+                        {med.nombre} - {med.dosis} ({med.frecuencia},{" "}
+                        {med.duracion})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Cerrar
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
