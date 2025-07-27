@@ -28,6 +28,17 @@ export const getParticipantes = async () => {
   }
 };
 
+// Función para obtener los participantes para atención médica
+export const getParticipantesSalud = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/salud`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener los participantes para salud:", error);
+    throw error;
+  }
+};
+
 // Función para obtener los miembros de una compañía
 export const getCompanyMembers = async (companyId: number) => {
   try {
@@ -164,6 +175,49 @@ export const getStats = async (): Promise<ParticipanteStats[]> => {
       console.error("Status:", error.response?.status);
       console.error("Mensaje:", error.response?.data);
     }
+    throw error;
+  }
+};
+
+// Función para agregar un nuevo medicamento al inventario
+export const agregarMedicamento = async (
+  nombre: string,
+  descripcion: string,
+  stock: number,
+  dosis: string | undefined
+) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/salud/inv/`, {
+      nombre,
+      descripcion,
+      stock,
+      dosis,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error al agregar el medicamento:", error);
+    throw error;
+  }
+};
+
+// Función para obtener el inventario de medicamentos
+export const getInventarioMedicamentos = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/salud/inv/`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al obtener el inventario de medicamentos:", error);
+    throw error;
+  }
+};
+
+// Nueva función para eliminar un medicamento del inventario
+export const eliminarMedicamento = async (id: number) => {
+  try {
+    const response = await axios.delete(`${BASE_URL}/salud/inv/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error al eliminar el medicamento:", error);
     throw error;
   }
 };

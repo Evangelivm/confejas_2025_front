@@ -45,18 +45,20 @@ import {
 } from "@/components/ui/popover";
 import { toast } from "sonner";
 import gsap from "gsap";
+import { getParticipantesSalud } from "@/lib/connections";
+import { useDebounce } from "@/hooks/use-debounce";
 
 // Tipos de datos
 interface Participante {
   id: number;
-  nombre: string;
+  nombres: string;
   edad: number;
   sexo: string;
-  compania: string;
-  tipoSangre: string;
-  enfermedadCronica: string;
-  tratamientoMedico: string;
-  alergiaMedicamento: string;
+  comp: string;
+  grupo_sang: string;
+  enf_cronica: string;
+  trat_med: string;
+  alergia_med: string;
 }
 
 interface AtencionMedica {
@@ -76,69 +78,13 @@ interface AtencionMedica {
   horaSeguimiento?: string;
 }
 
-// Datos de ejemplo
-const participantesEjemplo: Participante[] = [
-  {
-    id: 1,
-    nombre: "Víctor Jharem Ranyi Gomez Ortiz",
-    edad: 18,
-    sexo: "H",
-    compania: "1",
-    tipoSangre: "O+",
-    enfermedadCronica: "Ninguna",
-    tratamientoMedico: "Ninguno",
-    alergiaMedicamento: "Ninguna",
-  },
-  {
-    id: 2,
-    nombre: "Ana María Rodríguez López",
-    edad: 20,
-    sexo: "M",
-    compania: "1",
-    tipoSangre: "A-",
-    enfermedadCronica: "Asma",
-    tratamientoMedico: "Inhalador Salbutamol",
-    alergiaMedicamento: "Penicilina",
-  },
-  {
-    id: 3,
-    nombre: "Carlos Sánchez Pérez",
-    edad: 19,
-    sexo: "H",
-    compania: "2",
-    tipoSangre: "B+",
-    enfermedadCronica: "Diabetes Tipo 1",
-    tratamientoMedico: "Insulina",
-    alergiaMedicamento: "Ninguna",
-  },
-  {
-    id: 4,
-    nombre: "Sofía Martínez González",
-    edad: 18,
-    sexo: "M",
-    compania: "2",
-    tipoSangre: "AB+",
-    enfermedadCronica: "Ninguna",
-    tratamientoMedico: "Ninguno",
-    alergiaMedicamento: "Ibuprofeno",
-  },
-  {
-    id: 5,
-    nombre: "Juan Pablo Hernández Torres",
-    edad: 21,
-    sexo: "H",
-    compania: "3",
-    tipoSangre: "O-",
-    enfermedadCronica: "Hipertensión",
-    tratamientoMedico: "Losartán",
-    alergiaMedicamento: "Ninguna",
-  },
-];
-
 export default function AtencionMedicaPage() {
   const router = useRouter();
   const [paso, setPaso] = useState(1);
+  const [participantes, setParticipantes] = useState<Participante[]>([]);
   const [busquedaParticipante, setBusquedaParticipante] = useState("");
+  const debouncedBusqueda = useDebounce(busquedaParticipante, 300);
+  const [visibleCount, setVisibleCount] = useState(20);
   const [participanteSeleccionado, setParticipanteSeleccionado] =
     useState<Participante | null>(null);
   const [mostrarBusquedaParticipante, setMostrarBusquedaParticipante] =
@@ -158,6 +104,19 @@ export default function AtencionMedicaPage() {
   const paso1Ref = useRef<HTMLDivElement>(null);
   const paso2Ref = useRef<HTMLDivElement>(null);
   const paso3Ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchParticipantes = async () => {
+      try {
+        const data = await getParticipantesSalud();
+        setParticipantes(data);
+      } catch (error) {
+        toast.error("Error al cargar la lista de participantes.");
+      }
+    };
+
+    fetchParticipantes();
+  }, []);
 
   // Clear medications if "Se le dio Medicamentos" is unchecked
   useEffect(() => {
@@ -233,8 +192,8 @@ export default function AtencionMedicaPage() {
   };
 
   // Filtrar participantes según la búsqueda
-  const participantesFiltrados = participantesEjemplo.filter((p) =>
-    p.nombre.toLowerCase().includes(busquedaParticipante.toLowerCase())
+  const participantesFiltrados = participantes.filter((p) =>
+    p.nombres.toLowerCase().includes(debouncedBusqueda.toLowerCase())
   );
 
   // Seleccionar participante
@@ -242,7 +201,7 @@ export default function AtencionMedicaPage() {
     setParticipanteSeleccionado(participante);
     setAtencion({ ...atencion, participanteId: participante.id });
     setMostrarBusquedaParticipante(false);
-    toast.success(`Participante seleccionado: ${participante.nombre}`);
+    toast.success(`Participante seleccionado: ${participante.nombres}`);
   };
 
   // Agregar medicamento
@@ -395,7 +354,7 @@ export default function AtencionMedicaPage() {
                   >
                     <Search className="h-4 w-4 mr-2 opacity-50" />
                     {participanteSeleccionado
-                      ? participanteSeleccionado.nombre
+                      ? participanteSeleccionado.nombres
                       : "Buscar participante..."}
                   </Button>
 
@@ -416,37 +375,54 @@ export default function AtencionMedicaPage() {
                       </CardHeader>
                       <CardContent className="max-h-64 overflow-y-auto py-2">
                         {participantesFiltrados.length > 0 ? (
-                          <div className="space-y-1">
-                            {participantesFiltrados.map((participante) => (
-                              <div
-                                key={participante.id}
-                                className="flex items-center justify-between p-2 rounded-md hover:bg-slate-100 cursor-pointer"
+                          <>
+                            <div className="space-y-1">
+                              {participantesFiltrados
+                                .slice(0, visibleCount)
+                                .map((participante) => (
+                                  <div
+                                    key={participante.id}
+                                    className="flex items-center justify-between p-2 rounded-md hover:bg-slate-100 cursor-pointer"
+                                    onClick={() =>
+                                      seleccionarParticipante(participante)
+                                    }
+                                  >
+                                    <div>
+                                      <p className="font-medium">
+                                        {participante.nombres}
+                                      </p>
+                                      <div className="flex items-center text-sm text-slate-500">
+                                        <span>{participante.edad} años</span>
+                                        <span className="mx-1">•</span>
+                                        <span>
+                                          {participante.sexo === "H"
+                                            ? "Hombre"
+                                            : "Mujer"}
+                                        </span>
+                                        <span className="mx-1">•</span>
+                                        <span>
+                                          {participante.comp === "Staff"
+                                            ? "Staff"
+                                            : `Compañía ${participante.comp}`}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <Check className="h-5 w-5 text-blue-600 opacity-0 group-hover:opacity-100" />
+                                  </div>
+                                ))}
+                            </div>
+                            {visibleCount < participantesFiltrados.length && (
+                              <Button
+                                variant="link"
+                                className="w-full mt-2"
                                 onClick={() =>
-                                  seleccionarParticipante(participante)
+                                  setVisibleCount((prev) => prev + 20)
                                 }
                               >
-                                <div>
-                                  <p className="font-medium">
-                                    {participante.nombre}
-                                  </p>
-                                  <div className="flex items-center text-sm text-slate-500">
-                                    <span>{participante.edad} años</span>
-                                    <span className="mx-1">•</span>
-                                    <span>
-                                      {participante.sexo === "H"
-                                        ? "Hombre"
-                                        : "Mujer"}
-                                    </span>
-                                    <span className="mx-1">•</span>
-                                    <span>
-                                      Compañía {participante.compania}
-                                    </span>
-                                  </div>
-                                </div>
-                                <Check className="h-5 w-5 text-blue-600 opacity-0 group-hover:opacity-100" />
-                              </div>
-                            ))}
-                          </div>
+                                Cargar más
+                              </Button>
+                            )}
+                          </>
                         ) : (
                           <div className="py-3 text-center text-sm text-slate-500">
                             No se encontraron participantes
@@ -462,7 +438,7 @@ export default function AtencionMedicaPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-medium">
-                          {participanteSeleccionado.nombre}
+                          {participanteSeleccionado.nombres}
                         </h3>
                         <div className="text-sm text-slate-500 mt-1">
                           <p>
@@ -471,7 +447,11 @@ export default function AtencionMedicaPage() {
                               ? " Hombre"
                               : " Mujer"}
                           </p>
-                          <p>Compañía {participanteSeleccionado.compania}</p>
+                          <p>
+                            {participanteSeleccionado.comp === "Staff"
+                              ? "Staff"
+                              : `Compañía ${participanteSeleccionado.comp}`}
+                          </p>
                         </div>
                       </div>
                       <Button
@@ -502,6 +482,15 @@ export default function AtencionMedicaPage() {
         {paso === 2 && (
           <Card className="mb-4">
             <CardHeader className="pb-3">
+              {participanteSeleccionado && (
+                <CardTitle className="text-lg mb-2">
+                  {participanteSeleccionado.comp === "Staff"
+                    ? "(Staff)"
+                    : `C${participanteSeleccionado.comp} -`}{" "}
+                  {participanteSeleccionado.nombres}{" "}
+                  {`(${participanteSeleccionado.edad})`}
+                </CardTitle>
+              )}
               <CardTitle className="text-lg">Datos de la Consulta</CardTitle>
               <CardDescription>
                 Ingrese la información sobre la consulta médica
@@ -570,7 +559,7 @@ export default function AtencionMedicaPage() {
                         <Droplet className="h-4 w-4 mr-2 text-blue-600" />
                         <span>
                           <span className="font-medium">Tipo de Sangre:</span>{" "}
-                          {participanteSeleccionado.tipoSangre}
+                          {participanteSeleccionado.grupo_sang}
                         </span>
                       </div>
                       <div className="flex items-center">
@@ -579,7 +568,7 @@ export default function AtencionMedicaPage() {
                           <span className="font-medium">
                             Enfermedad Crónica:
                           </span>{" "}
-                          {participanteSeleccionado.enfermedadCronica}
+                          {participanteSeleccionado.enf_cronica}
                         </span>
                       </div>
                       <div className="flex items-center">
@@ -588,7 +577,7 @@ export default function AtencionMedicaPage() {
                           <span className="font-medium">
                             Tratamiento Médico:
                           </span>{" "}
-                          {participanteSeleccionado.tratamientoMedico}
+                          {participanteSeleccionado.trat_med}
                         </span>
                       </div>
                       <div className="flex items-center">
@@ -597,7 +586,7 @@ export default function AtencionMedicaPage() {
                           <span className="font-medium">
                             Alergia a Medicamentos:
                           </span>{" "}
-                          {participanteSeleccionado.alergiaMedicamento}
+                          {participanteSeleccionado.alergia_med}
                         </span>
                       </div>
                     </div>

@@ -23,6 +23,7 @@ interface CompanyMember {
   sexo: "H" | "M";
   asistio: "Si" | "No";
   comp: string;
+  tipo: "Participante" | "Staff";
 }
 
 interface Company {
@@ -37,6 +38,13 @@ interface Company {
 
 export default function CompanyPage() {
   const [company, setCompany] = useState<Company | null>(null);
+  const [counselors, setCounselors] = useState<{
+    male: { id: number | null; name: string };
+    female: { id: number | null; name: string };
+  }>({
+    male: { id: null, name: "No asignado" },
+    female: { id: null, name: "No asignada" },
+  });
   const [showMenu, setShowMenu] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -93,11 +101,28 @@ export default function CompanyPage() {
           return;
         }
 
+        const staff = members.filter((m) => m.tipo === "Staff");
+        const participants = members.filter((m) => m.tipo === "Participante");
+
+        const maleCounselor = staff.find((s) => s.sexo === "H");
+        const femaleCounselor = staff.find((s) => s.sexo === "M");
+
+        setCounselors({
+          male: {
+            id: maleCounselor?.id || null,
+            name: maleCounselor?.nombres || "No asignado",
+          },
+          female: {
+            id: femaleCounselor?.id || null,
+            name: femaleCounselor?.nombres || "No asignada",
+          },
+        });
+
         const companyComp = members[0].comp;
         const companyId = parseInt(companyComp.replace("C", ""), 10);
 
-        const maleMembers = members.filter((m) => m.sexo === "H");
-        const femaleMembers = members.filter((m) => m.sexo === "M");
+        const maleMembers = participants.filter((m) => m.sexo === "H");
+        const femaleMembers = participants.filter((m) => m.sexo === "M");
 
         const maleCount = maleMembers.filter((m) => m.asistio === "Si").length;
         const femaleCount = femaleMembers.filter(
@@ -111,7 +136,7 @@ export default function CompanyPage() {
           maleTotal: maleMembers.length,
           femaleCount,
           femaleTotal: femaleMembers.length,
-          members,
+          members: participants,
         });
       } catch (error) {
         console.error("Failed to fetch company members:", error);
@@ -354,6 +379,71 @@ export default function CompanyPage() {
 
       {/* Company content */}
       <div className="container max-w-md px-4 mt-4">
+        {/* Counselors */}
+        <div className="mb-4 text-center">
+          <div className="text-sm text-slate-600">
+            <span className="font-semibold">Consejeros Asignados:</span>
+            <br />
+            {isMobile ? (
+              <div className="flex flex-col items-center">
+                {counselors.female.id ? (
+                  <b>
+                    <Link
+                      href={`/registro/${counselors.female.id}`}
+                      className="text-pink-600 hover:underline"
+                    >
+                      {counselors.female.name}
+                    </Link>
+                  </b>
+                ) : (
+                  <span>{counselors.female.name}</span>
+                )}
+                <span>-</span>
+                {counselors.male.id ? (
+                  <b>
+                    <Link
+                      href={`/registro/${counselors.male.id}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {counselors.male.name}
+                    </Link>
+                  </b>
+                ) : (
+                  <span>{counselors.male.name}</span>
+                )}
+              </div>
+            ) : (
+              <p>
+                {counselors.female.id ? (
+                  <b>
+                    <Link
+                      href={`/registro/${counselors.female.id}`}
+                      className="text-pink-600 hover:underline"
+                    >
+                      {counselors.female.name}
+                    </Link>
+                  </b>
+                ) : (
+                  <span>{counselors.female.name}</span>
+                )}
+                <span className="mx-2">-</span>
+                {counselors.male.id ? (
+                  <b>
+                    <Link
+                      href={`/registro/${counselors.male.id}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {counselors.male.name}
+                    </Link>
+                  </b>
+                ) : (
+                  <span>{counselors.male.name}</span>
+                )}
+              </p>
+            )}
+          </div>
+        </div>
+
         {/* Gender tabs */}
         <div className="flex mb-4 border rounded-lg overflow-hidden">
           <button
@@ -475,7 +565,7 @@ export default function CompanyPage() {
         </Card>
 
         {/* Action buttons */}
-        <div className="flex gap-3 mt-6">
+        {/* <div className="flex gap-3 mt-6">
           <Button
             ref={addButtonRef}
             className="flex-1 hover:bg-opacity-90"
@@ -491,7 +581,7 @@ export default function CompanyPage() {
           <Button variant="outline" className="flex-1">
             Exportar Lista
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {/* Botón flotante para móviles (Radial Menu) */}

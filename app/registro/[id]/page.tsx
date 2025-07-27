@@ -473,13 +473,31 @@ export default function ProfilePage() {
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6 grid grid-cols-3 gap-4 items-center">
           <div>
             <p className="text-sm text-slate-500">Compañia</p>
-            <p className="text-lg font-semibold">
-              {loading
-                ? "Cargando..."
-                : error
-                ? "Error"
-                : participanteData.compania}
-            </p>
+            {loading ? (
+              <p className="text-lg font-semibold">Cargando...</p>
+            ) : error ? (
+              <p className="text-lg font-semibold">Error</p>
+            ) : participanteData.compania === "Staff" ? (
+              <p className="text-lg font-semibold">
+                {participanteData.compania}
+              </p>
+            ) : (
+              <Button
+                variant="link"
+                className="text-lg font-semibold p-0 h-auto"
+                onClick={() => {
+                  if (participanteData?.compania) {
+                    const companyId = participanteData.compania.replace(
+                      "C",
+                      ""
+                    );
+                    router.push(`/comp/${companyId}`);
+                  }
+                }}
+              >
+                {participanteData.compania}
+              </Button>
+            )}
           </div>
           <div className="text-center">
             <p className="text-sm text-slate-500">Habitación</p>
