@@ -36,49 +36,46 @@ import { useMobile } from "@/hooks/use-mobile";
 import RadialMenu from "@/components/radial-menu";
 import gsap from "gsap";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { useRouter, useParams } from "next/navigation";
-import { buscarParticipanteCompleto } from "@/lib/connections";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import localizedFormat from "dayjs/plugin/localizedFormat";
+import "dayjs/locale/es"; // Import the Spanish locale
+import {
+  buscarParticipanteCompleto,
+  getAtencionesByParticipanteId,
+} from "@/lib/connections";
 
-// Tipos para las atenciones médicas
-interface DiagnosticoCIE {
-  codigo: string;
-  descripcion: string;
-}
-
-interface Medicamento {
-  nombre: string;
-  dosis: string;
+// Tipos de datos
+interface MedicamentoRecetado {
   frecuencia: string;
   duracion: string;
-}
-
-interface AtencionMedica {
-  id: number;
-  participanteId: number;
-  fecha: string;
-  hora: string;
-  motivoConsulta: string;
-  sintomas: string[];
-  signos: {
-    temperatura: string;
-    presionArterial: string;
-    frecuenciaCardiaca: string;
-    frecuenciaRespiratoria: string;
-    saturacionOxigeno: string;
+  inventario_salud: {
+    nombre: string;
+    descripcion: string;
+    dosis: string | null;
   };
-  diagnosticos: DiagnosticoCIE[];
+}
+interface AtencionMedica {
+  id_salud: number;
+  fecha_consulta: string;
+  motivo_consulta: string;
   tratamiento: string;
-  medicamentos: Medicamento[];
-  indicaciones: string;
-  seguimiento: boolean;
-  fechaSeguimiento?: string;
-  medico: string;
+  seguimiento: number; // 0 o 1
+  fecha_seguimiento: string | null;
+  datos: {
+    id: number;
+    nombre_completo: string;
+  };
+  medicinas_recetadas: MedicamentoRecetado[];
 }
 
 export default function ProfilePage() {
@@ -94,6 +91,9 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("personal");
   const [atencionSeleccionada, setAtencionSeleccionada] =
     useState<AtencionMedica | null>(null);
+  const [historialAtenciones, setHistorialAtenciones] = useState<
+    AtencionMedica[]
+  >([]);
   const isMobile = useMobile();
 
   // Refs for tab content animations
@@ -112,118 +112,50 @@ export default function ProfilePage() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchParticipante = async () => {
+    const fetchData = async () => {
       if (!id) return;
       setLoading(true);
       setError(null);
       try {
-        const data = await buscarParticipanteCompleto(Number(id));
-        // console.log("Datos recibidos:", data);
-        setParticipanteData(data);
+        const participante = await buscarParticipanteCompleto(Number(id));
+        setParticipanteData(participante);
+        const atenciones = await getAtencionesByParticipanteId(Number(id));
+        setHistorialAtenciones(atenciones);
       } catch (err) {
-        console.error("Error fetching participant data:", err);
-        setError("No se pudo cargar la información del participante.");
+        console.error(
+          "Error fetching participant data or medical attentions:",
+          err
+        );
+        setError(
+          "No se pudo cargar la información del participante o sus atenciones médicas."
+        );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchParticipante();
+    fetchData();
   }, [id]);
 
-  // Datos de ejemplo para el historial de atenciones médicas del participante
-  // (Mantener por ahora, se integrará con datos reales si es necesario)
-  const historialAtenciones: AtencionMedica[] = [
-    {
-      id: 1,
-      participanteId: 1,
-      fecha: "2023-05-15",
-      hora: "09:30",
-      motivoConsulta: "Dolor de garganta y fiebre",
-      sintomas: ["Dolor de garganta", "Fiebre", "Malestar general"],
-      signos: {
-        temperatura: "38.5",
-        presionArterial: "120/80",
-        frecuenciaCardiaca: "88",
-        frecuenciaRespiratoria: "18",
-        saturacionOxigeno: "97",
-      },
-      diagnosticos: [
-        { codigo: "J02.9", descripcion: "Faringitis aguda, no especificada" },
-      ],
-      tratamiento: "Reposo, hidratación y medicamentos",
-      medicamentos: [
-        {
-          nombre: "Paracetamol",
-          dosis: "500mg",
-          frecuencia: "Cada 8 horas",
-          duracion: "5 días",
-        },
-        {
-          nombre: "Ibuprofeno",
-          dosis: "400mg",
-          frecuencia: "Cada 8 horas",
-          duracion: "3 días",
-        },
-      ],
-      indicaciones: "Reposo por 48 horas, evitar alimentos irritantes",
-      seguimiento: false,
-      medico: "Dr. Roberto Méndez",
-    },
-    {
-      id: 6,
-      participanteId: 1,
-      fecha: "2023-05-20",
-      hora: "15:45",
-      motivoConsulta: "Control de faringitis",
-      sintomas: ["Mejora de síntomas", "Leve dolor de garganta"],
-      signos: {
-        temperatura: "36.8",
-        presionArterial: "118/78",
-        frecuenciaCardiaca: "72",
-        frecuenciaRespiratoria: "16",
-        saturacionOxigeno: "99",
-      },
-      diagnosticos: [
-        { codigo: "J02.9", descripcion: "Faringitis aguda, no especificada" },
-      ],
-      tratamiento: "Continuar hidratación",
-      medicamentos: [],
-      indicaciones: "Alta médica, retomar actividades normales",
-      seguimiento: false,
-      medico: "Dra. Carmen Jiménez",
-    },
-    {
-      id: 12,
-      participanteId: 1,
-      fecha: "2023-07-10",
-      hora: "11:20",
-      motivoConsulta: "Reacción alérgica leve",
-      sintomas: ["Erupciones cutáneas", "Picazón", "Estornudos"],
-      signos: {
-        temperatura: "36.6",
-        presionArterial: "115/75",
-        frecuenciaCardiaca: "76",
-        frecuenciaRespiratoria: "16",
-        saturacionOxigeno: "98",
-      },
-      diagnosticos: [
-        { codigo: "T78.4", descripcion: "Alergia no especificada" },
-      ],
-      tratamiento: "Antihistamínicos",
-      medicamentos: [
-        {
-          nombre: "Loratadina",
-          dosis: "10mg",
-          frecuencia: "Cada 24 horas",
-          duracion: "5 días",
-        },
-      ],
-      indicaciones: "Evitar exposición a alérgenos conocidos",
-      seguimiento: false,
-      medico: "Dr. Roberto Méndez",
-    },
-  ];
+  dayjs.extend(utc);
+  dayjs.extend(localizedFormat);
+  dayjs.locale("es"); // Set dayjs to use the Spanish locale globally
+
+  // Formatear fecha y hora
+  const formatearFecha = (
+    isoString: string,
+    formatType: "short" | "long" = "short"
+  ) => {
+    if (!isoString) return "";
+    const date = dayjs.utc(isoString).local();
+    if (formatType === "long") {
+      return date.format("DD [de] MMMM [del] YYYY");
+    }
+    return date.format("DD/MM/YYYY");
+  };
+  const formatearHora = (isoString: string) => {
+    return dayjs.utc(isoString).local().format("HH:mm");
+  };
 
   // Format phone number for display
   const formatPhone = (phone: string) => {
@@ -237,30 +169,6 @@ export default function ProfilePage() {
   const formatWhatsAppPhone = (phone: string) => {
     // Assuming Peru country code (+51)
     return `51${phone}`;
-  };
-
-  // Formatear fecha
-  const formatearFecha = (fechaString: string) => {
-    const date = new Date(fechaString);
-    // Use UTC methods to avoid timezone issues affecting the day
-    const day = date.getUTCDate();
-    const year = date.getUTCFullYear();
-    const monthNames = [
-      "Enero",
-      "Febrero",
-      "Marzo",
-      "Abril",
-      "Mayo",
-      "Junio",
-      "Julio",
-      "Agosto",
-      "Septiembre",
-      "Octubre",
-      "Noviembre",
-      "Diciembre",
-    ];
-    const month = monthNames[date.getUTCMonth()];
-    return `${day} de ${month} de ${year}`;
   };
 
   // Initialize tab animations
@@ -565,16 +473,23 @@ export default function ProfilePage() {
                   <Calendar className="h-5 w-5 text-slate-500 mr-3" />
                   <div>
                     <p className="text-sm font-medium text-slate-500">
-                      Fecha de Nacimiento
+                      {loading || error
+                        ? "Cargando..."
+                        : participanteData.nacimiento
+                        ? "Fecha de Nacimiento"
+                        : "Edad"}
                     </p>
                     <p className="text-slate-900">
                       {loading
                         ? "Cargando..."
                         : error
                         ? "Error"
-                        : `${formatearFecha(participanteData.nacimiento)} (${
-                            participanteData.edad
-                          } años)`}
+                        : participanteData.nacimiento
+                        ? `${formatearFecha(
+                            participanteData.nacimiento,
+                            "long"
+                          )} (${participanteData.edad} años)`
+                        : `${participanteData.edad} años`}
                     </p>
                   </div>
                 </div>
@@ -939,38 +854,49 @@ export default function ProfilePage() {
                   <>
                     <div className="space-y-3">
                       {historialAtenciones.map((atencion) => (
-                        <div
-                          key={atencion.id}
-                          className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50"
+                        <Card
+                          key={atencion.id_salud}
+                          className="cursor-pointer hover:shadow-md transition-shadow"
                           onClick={() => verDetallesAtencion(atencion)}
                         >
-                          <div className="flex-1">
-                            <div className="flex items-center">
-                              <Calendar className="h-4 w-4 text-slate-500 mr-1" />
-                              <span className="text-sm text-slate-500">
-                                {formatearFecha(atencion.fecha)} •{" "}
-                                {atencion.hora}
-                              </span>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 text-slate-500 mr-1" />
+                                  <span className="text-sm text-slate-500">
+                                    {formatearFecha(atencion.fecha_consulta)} •{" "}
+                                    {formatearHora(atencion.fecha_consulta)}
+                                  </span>
+                                </div>
+                                <h3 className="font-medium mt-1">
+                                  {atencion.datos.nombre_completo}
+                                </h3>
+                                <p className="text-sm text-slate-600 mt-1">
+                                  {atencion.motivo_consulta}
+                                </p>
+                                {/* Mostrar fecha de seguimiento en el card si existe */}
+                                {atencion.seguimiento === 1 &&
+                                  atencion.fecha_seguimiento && (
+                                    <div className="flex items-center mt-2 text-sm text-slate-500">
+                                      <Clock className="h-4 w-4 mr-1" />
+                                      <span>
+                                        Seguimiento:{" "}
+                                        {formatearFecha(
+                                          atencion.fecha_seguimiento
+                                        )}{" "}
+                                        •{" "}
+                                        {formatearHora(
+                                          atencion.fecha_seguimiento
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                              </div>
+                              <ChevronRight className="h-5 w-5 text-slate-400" />
                             </div>
-                            <p className="font-medium mt-1">
-                              {atencion.motivoConsulta}
-                            </p>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {atencion.diagnosticos.map(
-                                (diagnostico, index) => (
-                                  <Badge
-                                    key={index}
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    {diagnostico.codigo}
-                                  </Badge>
-                                )
-                              )}
-                            </div>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-slate-400" />
-                        </div>
+                          </CardContent>
+                        </Card>
                       ))}
                     </div>
                     <Button
@@ -1044,164 +970,98 @@ export default function ProfilePage() {
 
       {/* Modal de detalles de atención */}
       {atencionSeleccionada && (
-        <Sheet
+        <Dialog
           open={!!atencionSeleccionada}
           onOpenChange={() => setAtencionSeleccionada(null)}
         >
-          <SheetContent side="bottom" className="h-[90vh] rounded-t-xl">
-            <SheetHeader className="text-left">
-              <SheetTitle>Detalles de la Atención</SheetTitle>
-              <SheetDescription>
-                {formatearFecha(atencionSeleccionada.fecha)} •{" "}
-                {atencionSeleccionada.hora} • {atencionSeleccionada.medico}
-              </SheetDescription>
-            </SheetHeader>
-            <div className="mt-4 overflow-y-auto h-[calc(100%-80px)] pb-8">
-              <div>
-                <h3 className="font-medium text-sm text-slate-500">
-                  Motivo de Consulta
-                </h3>
-                <p className="mt-1">{atencionSeleccionada.motivoConsulta}</p>
-              </div>
-
-              <Separator className="my-4" />
-
-              <div>
-                <h3 className="font-medium text-sm text-slate-500">
-                  Diagnósticos
-                </h3>
-                <div className="space-y-2 mt-2">
-                  {atencionSeleccionada.diagnosticos.map(
-                    (diagnostico, index) => (
-                      <div
-                        key={index}
-                        className="bg-slate-50 p-3 rounded-md border border-slate-200"
-                      >
-                        <p className="font-medium">{diagnostico.codigo}</p>
-                        <p className="text-sm text-slate-600">
-                          {diagnostico.descripcion}
-                        </p>
-                      </div>
-                    )
-                  )}
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Detalles de Atención Médica</DialogTitle>
+              <DialogDescription>
+                Información completa de la atención registrada.
+              </DialogDescription>
+            </DialogHeader>
+            {atencionSeleccionada && (
+              <div className="space-y-4 py-4 text-sm">
+                <div>
+                  <strong>Participante:</strong>{" "}
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto font-normal text-left"
+                    onClick={() =>
+                      router.push(`/registro/${atencionSeleccionada.datos.id}`)
+                    }
+                  >
+                    {atencionSeleccionada.datos.nombre_completo}
+                  </Button>
                 </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              <div>
-                <h3 className="font-medium text-sm text-slate-500">
-                  Tratamiento
-                </h3>
-                <p className="mt-1">{atencionSeleccionada.tratamiento}</p>
-              </div>
-
-              <div className="mt-4">
-                <h3 className="font-medium text-sm text-slate-500">
-                  Medicamentos
-                </h3>
-                {atencionSeleccionada.medicamentos.length > 0 ? (
-                  <div className="space-y-2 mt-2">
-                    {atencionSeleccionada.medicamentos.map(
-                      (medicamento, index) => (
-                        <div
-                          key={index}
-                          className="bg-slate-50 p-3 rounded-md border border-slate-200"
-                        >
-                          <p className="font-medium">{medicamento.nombre}</p>
-                          <p className="text-sm text-slate-600">
-                            {medicamento.dosis} - {medicamento.frecuencia}
-                            {medicamento.duracion &&
-                              ` - ${medicamento.duracion}`}
-                          </p>
-                        </div>
-                      )
-                    )}
+                <p>
+                  <strong>Fecha de Consulta:</strong>{" "}
+                  {formatearFecha(atencionSeleccionada.fecha_consulta)} a las{" "}
+                  {formatearHora(atencionSeleccionada.fecha_consulta)}
+                </p>
+                <p>
+                  <strong>Motivo de Consulta:</strong>{" "}
+                  {atencionSeleccionada.motivo_consulta}
+                </p>
+                <p>
+                  <strong>Tratamiento:</strong>{" "}
+                  {atencionSeleccionada.tratamiento}
+                </p>
+                <p>
+                  <strong>Seguimiento:</strong>{" "}
+                  {atencionSeleccionada.seguimiento === 1 ? `Sí` : "No"}
+                </p>
+                {/* Mostrar fecha de seguimiento en el dialog si existe */}
+                {atencionSeleccionada.seguimiento === 1 &&
+                  atencionSeleccionada.fecha_seguimiento && (
+                    <p>
+                      <strong>Fecha de Seguimiento:</strong>{" "}
+                      {formatearFecha(atencionSeleccionada.fecha_seguimiento)} a
+                      las{" "}
+                      {formatearHora(atencionSeleccionada.fecha_seguimiento)}
+                    </p>
+                  )}
+                {atencionSeleccionada.medicinas_recetadas.length > 0 && (
+                  <div>
+                    <p className="font-medium mt-2">Medicamentos Recetados:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {atencionSeleccionada.medicinas_recetadas.map(
+                        (med, index) => (
+                          <li key={index}>
+                            {med.inventario_salud.nombre}
+                            {med.inventario_salud.dosis &&
+                              ` - ${med.inventario_salud.dosis}`}
+                            {(med.frecuencia || med.duracion) && " ("}
+                            {med.frecuencia && (
+                              <>
+                                <b>Frecuencia:</b> {med.frecuencia}
+                                {med.duracion && ", "}
+                              </>
+                            )}
+                            {med.duracion && (
+                              <>
+                                <b>Duración:</b> {med.duracion}
+                              </>
+                            )}
+                            {(med.frecuencia || med.duracion) && ")"}
+                          </li>
+                        )
+                      )}
+                    </ul>
                   </div>
-                ) : (
-                  <p className="text-sm text-slate-500 mt-1">
-                    No se recetaron medicamentos
-                  </p>
                 )}
               </div>
-
-              <Separator className="my-4" />
-
-              <div>
-                <h3 className="font-medium text-sm text-slate-500">
-                  Signos Vitales
-                </h3>
-                <div className="grid grid-cols-2 gap-3 mt-2">
-                  <div>
-                    <p className="text-xs text-slate-500">Temperatura</p>
-                    <p>{atencionSeleccionada.signos.temperatura} °C</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Presión Arterial</p>
-                    <p>{atencionSeleccionada.signos.presionArterial} mmHg</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">
-                      Frecuencia Cardíaca
-                    </p>
-                    <p>{atencionSeleccionada.signos.frecuenciaCardiaca} lpm</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">
-                      Frecuencia Respiratoria
-                    </p>
-                    <p>
-                      {atencionSeleccionada.signos.frecuenciaRespiratoria} rpm
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">
-                      Saturación de Oxígeno
-                    </p>
-                    <p>{atencionSeleccionada.signos.saturacionOxigeno} %</p>
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              <div>
-                <h3 className="font-medium text-sm text-slate-500">
-                  Indicaciones
-                </h3>
-                <p className="mt-1">{atencionSeleccionada.indicaciones}</p>
-              </div>
-
-              {atencionSeleccionada.seguimiento && (
-                <div className="mt-4">
-                  <h3 className="font-medium text-sm text-slate-500">
-                    Seguimiento
-                  </h3>
-                  <div className="flex items-center mt-1">
-                    <Calendar
-                      className="h-4 w-4"
-                      style={{ color: currentColors.primary }}
-                      mr-2
-                    />
-                    <p>
-                      {formatearFecha(
-                        atencionSeleccionada.fechaSeguimiento || ""
-                      )}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="absolute bottom-4 left-4 right-4">
-              <Button
-                className="w-full"
-                onClick={() => setAtencionSeleccionada(null)}
-              >
-                Cerrar
-              </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
+            )}
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="secondary">
+                  Cerrar
+                </Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </main>
   );

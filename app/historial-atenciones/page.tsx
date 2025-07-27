@@ -2,6 +2,9 @@
 import type React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import localizedFormat from "dayjs/plugin/localizedFormat";
 import {
   ChevronLeft,
   Search,
@@ -191,19 +194,16 @@ export default function HistorialAtencionesPage() {
     atencionesOriginales,
     participantes,
   ]);
+
+  dayjs.extend(utc);
+  dayjs.extend(localizedFormat);
+
   // Formatear fecha y hora
   const formatearFecha = (isoString: string) => {
-    const date = new Date(isoString);
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0"); // Month is 0-indexed
-    const year = date.getUTCFullYear();
-    return `${day}/${month}/${year}`;
+    return dayjs.utc(isoString).local().format("DD/MM/YYYY");
   };
   const formatearHora = (isoString: string) => {
-    const date = new Date(isoString);
-    const hours = String(date.getUTCHours()).padStart(2, "0");
-    const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
+    return dayjs.utc(isoString).local().format("HH:mm");
   };
   // Limpiar filtros
   const limpiarFiltros = () => {
@@ -264,15 +264,13 @@ export default function HistorialAtencionesPage() {
       onContextMenu={!isMobile ? handleRightClick : undefined}
     >
       {/* Header */}
-      <div className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 flex items-center justify-between">
-        <div className="flex items-center">
-          <button onClick={() => router.push("/")} className="text-white mr-2">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h1 className="text-xl font-bold text-white">
-            Historial de Atenciones
-          </h1>
-        </div>
+      <div className="w-full bg-gradient-to-r from-blue-600 to-blue-800 p-4 flex items-center">
+        <button onClick={() => router.push("/")} className="text-white mr-2">
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <h1 className="text-xl font-bold text-white mr-auto">
+          Historial de Atenciones
+        </h1>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={nuevaAtencion}>
             Nueva Atención

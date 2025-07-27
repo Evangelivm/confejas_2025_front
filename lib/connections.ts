@@ -268,3 +268,19 @@ export const getHistorialAtenciones = async () => {
     throw error;
   }
 };
+
+// Nueva función para obtener atenciones médicas por ID de participante
+export const getAtencionesByParticipanteId = async (id_datos: number) => {
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/salud/atencion/part/${id_datos}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error(
+      `Error al obtener atenciones médicas para el participante ${id_datos}:`,
+      error
+    );
+    throw error;
+  }
+};
