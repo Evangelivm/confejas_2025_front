@@ -35,7 +35,7 @@ function Estaca({ setEstac, setBarr }: EstacaProps) {
   // Fetch initial options
   useEffect(() => {
     axios
-      .get("http://localhost:3000/estaca")
+      .get(`${process.env.NEXT_PUBLIC_HTTP_URL}/estaca`)
       .then((response) => {
         setOptions(response.data);
         setLoading(false); // Cambiar a false cuando los datos estén listos
@@ -50,7 +50,7 @@ function Estaca({ setEstac, setBarr }: EstacaProps) {
   useEffect(() => {
     if (selectedEstaca !== null) {
       axios
-        .get(`http://localhost:3000/estaca/${selectedEstaca}`)
+        .get(`${process.env.NEXT_PUBLIC_HTTP_URL}/estaca/${selectedEstaca}`)
         .then((response) => {
           setSubOptions(response.data);
         })
