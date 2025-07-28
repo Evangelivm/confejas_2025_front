@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 
 interface Option {
-  est_id: number;
+  id_estaca: number;
   estaca: string;
 }
 
@@ -85,11 +85,18 @@ function Estaca({ setEstac, setBarr }: EstacaProps) {
             <SelectValue placeholder="Seleccione la estaca" />
           </SelectTrigger>
           <SelectContent>
-            {options.map((option) => (
-              <SelectItem key={option.est_id} value={option.est_id.toString()}>
-                {option.estaca}
-              </SelectItem>
-            ))}
+            {options.map((option) =>
+              option &&
+              option.id_estaca !== undefined &&
+              option.id_estaca !== null ? (
+                <SelectItem
+                  key={option.id_estaca}
+                  value={option.id_estaca.toString()}
+                >
+                  {option.estaca}
+                </SelectItem>
+              ) : null
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -101,14 +108,18 @@ function Estaca({ setEstac, setBarr }: EstacaProps) {
             <SelectValue placeholder="Seleccione el barrio o rama" />
           </SelectTrigger>
           <SelectContent>
-            {subOptions.map((subOption) => (
-              <SelectItem
-                key={subOption.id_barrio}
-                value={subOption.id_barrio.toString()}
-              >
-                {subOption.barrio}
-              </SelectItem>
-            ))}
+            {subOptions.map((subOption) =>
+              subOption &&
+              subOption.id_barrio !== undefined &&
+              subOption.id_barrio !== null ? (
+                <SelectItem
+                  key={subOption.id_barrio}
+                  value={subOption.id_barrio.toString()}
+                >
+                  {subOption.barrio}
+                </SelectItem>
+              ) : null
+            )}
           </SelectContent>
         </Select>
       </div>

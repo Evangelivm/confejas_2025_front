@@ -28,6 +28,17 @@ export const getParticipantes = async () => {
   }
 };
 
+// Nueva función para registrar un participante
+export const registerParticipante = async (data: any) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/part/`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error al registrar el participante:", error);
+    throw error;
+  }
+};
+
 // Función para obtener los participantes para atención médica
 export const getParticipantesSalud = async () => {
   try {

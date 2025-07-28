@@ -9,26 +9,55 @@ import { socket } from "@/lib/socket"; // Asegúrate de que este archivo socket.
 interface ComproomProps {
   edad: number; // Recibe la edad como prop
   genero: string;
+  onSelectCompany: (company: number | null) => void;
+  onSelectRoom: (room: { id: number; name: string } | null) => void;
 }
 // Definimos el tipo Company
 type Company = {
-  compañia: number;
+  id_comp: number;
+  comp: string;
   hombres: string;
   mujeres: string;
 };
 
 // Definimos el tipo Room
 type Room = {
-  name: string;
-  occupiedBeds: number;
-  totalBeds: number;
+  id_habitacion: number;
+  habitacion: string;
+  camas: string;
+  registrados: number;
+  ocupados: number;
+  libres: number;
 };
 
-function Comproom({ edad, genero }: ComproomProps) {
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
-  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+function Comproom({
+  edad,
+  genero,
+  onSelectCompany,
+  onSelectRoom,
+}: ComproomProps) {
+  const [selectedCompany, setSelectedCompanyInternal] = useState<number | null>(
+    null
+  );
+  const [selectedRoomDisplay, setSelectedRoomDisplay] = useState<string | null>(
+    null
+  ); // State to hold the room name for display
+  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null); // State to hold the room ID for parent
   const [companyMessages, setCompanyMessages] = useState<Company[]>([]);
   const [roomsData, setRoomsData] = useState<Room[]>([]);
+
+  // Update parent state when internal state changes
+  useEffect(() => {
+    onSelectCompany(selectedCompany);
+  }, [selectedCompany, onSelectCompany]);
+
+  useEffect(() => {
+    onSelectRoom(
+      selectedRoomId !== null
+        ? { id: selectedRoomId, name: selectedRoomDisplay || "" }
+        : null
+    );
+  }, [selectedRoomId, selectedRoomDisplay, onSelectRoom]);
 
   useEffect(() => {
     const companyChannel = `summary-age-${edad}`;
@@ -54,22 +83,20 @@ function Comproom({ edad, genero }: ComproomProps) {
           (msg) =>
             msg &&
             typeof msg === "object" &&
-            typeof msg.compañia === "number" &&
+            typeof msg.id_comp === "number" &&
             typeof msg.hombres === "string" &&
             typeof msg.mujeres === "string"
         );
 
         // Si el mensaje es válido o vacío, manejarlo
-        setTimeout(() => {
-          if (validMessages.length > 0) {
-            setCompanyMessages([...validMessages]); // Actualizar con mensajes válidos
-          } else {
-            setCompanyMessages([]); // Borrar el estado si no hay mensajes válidos
-            console.log(
-              "Estado borrado debido a mensaje vacío o sin formato válido."
-            );
-          }
-        }, 1000);
+        if (validMessages.length > 0) {
+          setCompanyMessages([...validMessages]); // Actualizar con mensajes válidos
+        } else {
+          setCompanyMessages([]); // Borrar el estado si no hay mensajes válidos
+          console.log(
+            "Estado borrado debido a mensaje vacío o sin formato válido."
+          );
+        }
       } catch (error) {
         console.error("Error al parsear mensaje:", error);
       }
@@ -95,22 +122,23 @@ function Comproom({ edad, genero }: ComproomProps) {
           (msg) =>
             msg &&
             typeof msg === "object" &&
-            typeof msg.name === "string" &&
-            typeof msg.occupiedBeds === "number" &&
-            typeof msg.totalBeds === "number"
+            typeof msg.id_habitacion === "number" &&
+            typeof msg.habitacion === "string" &&
+            typeof msg.camas === "string" &&
+            typeof msg.registrados === "number" &&
+            typeof msg.ocupados === "number" &&
+            typeof msg.libres === "number"
         );
 
         // Si el mensaje es válido o vacío, manejarlo
-        setTimeout(() => {
-          if (validMessages.length > 0) {
-            setRoomsData([...validMessages]); // Actualizar con mensajes válidos
-          } else {
-            setRoomsData([]); // Borrar el estado si no hay mensajes válidos
-            console.log(
-              "Estado borrado debido a mensaje vacío o sin formato válido."
-            );
-          }
-        }, 1000);
+        if (validMessages.length > 0) {
+          setRoomsData([...validMessages]); // Actualizar con mensajes válidos
+        } else {
+          setRoomsData([]); // Borrar el estado si no hay mensajes válidos
+          console.log(
+            "Estado borrado debido a mensaje vacío o sin formato válido."
+          );
+        }
       } catch (error) {
         console.error("Error al parsear mensaje:", error);
       }
@@ -132,7 +160,7 @@ function Comproom({ edad, genero }: ComproomProps) {
         <Label>8. Compañía de acuerdo a la edad</Label>
         <div className="flex items-center space-x-2">
           <CompanySelectionDialog
-            onSelect={setSelectedCompany}
+            onSelect={setSelectedCompanyInternal}
             comp={companyMessages}
           />
           {selectedCompany && (
@@ -146,10 +174,16 @@ function Comproom({ edad, genero }: ComproomProps) {
       <div className="space-y-2">
         <Label>9. Habitación de acuerdo al sexo</Label>
         <div className="flex items-center space-x-2">
-          <RoomSelectionDialog onSelect={setSelectedRoom} rooms={roomsData} />
-          {selectedRoom && (
+          <RoomSelectionDialog
+            onSelect={(room) => {
+              setSelectedRoomId(room ? room.id : null);
+              setSelectedRoomDisplay(room ? room.name : null);
+            }}
+            rooms={roomsData}
+          />
+          {selectedRoomDisplay && (
             <span className="text-white text-sm">
-              Habitación seleccionada: <b>{selectedRoom}</b>
+              Habitación seleccionada: <b>{selectedRoomDisplay}</b>
             </span>
           )}
         </div>

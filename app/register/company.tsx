@@ -12,7 +12,8 @@ import {
 
 // Definimos el tipo para las compañías
 type Company = {
-  compañia: number; // Es un número
+  id_comp: number; // Es un número
+  comp: string; // Es una cadena
   hombres: string; // Es una cadena
   mujeres: string; // Es una cadena
 };
@@ -21,10 +22,10 @@ export function CompanySelectionDialog({
   onSelect,
   comp,
 }: {
-  onSelect: (company: string) => void; // selectedCompany será un string
+  onSelect: (company: number | null) => void; // selectedCompany será un number
   comp: Company[]; // Array de compañías dinámico
 }) {
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null); // selectedCompany es un string
+  const [selectedCompany, setSelectedCompany] = useState<number | null>(null); // selectedCompany es un number
 
   return (
     <Dialog>
@@ -49,14 +50,14 @@ export function CompanySelectionDialog({
               key={index}
               variant="outline"
               className={`justify-between ${
-                selectedCompany === company.compañia.toString()
+                selectedCompany === company.id_comp
                   ? "bg-[#01B6D1] text-white"
                   : "bg-white/20"
               } hover:bg-[#01B6D1] hover:text-white`}
-              onClick={() => setSelectedCompany(company.compañia.toString())}
+              onClick={() => setSelectedCompany(company.id_comp)}
             >
               <span>
-                <b>C{company.compañia}</b>
+                <b>{company.comp}</b>
               </span>
               <span>
                 Hombres: {company.hombres} | Mujeres: {company.mujeres}

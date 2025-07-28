@@ -11,19 +11,22 @@ import {
 } from "@/components/ui/dialog";
 
 type Room = {
-  name: string;
-  occupiedBeds: number;
-  totalBeds: number;
+  id_habitacion: number; // Nuevo campo para el ID de la habitación
+  habitacion: string;
+  camas: string;
+  registrados: number;
+  ocupados: number;
+  libres: number;
 };
 
 export function RoomSelectionDialog({
   onSelect,
   rooms,
 }: {
-  onSelect: (room: string) => void;
+  onSelect: (room: { id: number; name: string } | null) => void;
   rooms: Room[]; // Array de habitaciones dinámico
 }) {
-  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
 
   return (
     <Dialog>
@@ -45,19 +48,19 @@ export function RoomSelectionDialog({
         <div className="grid gap-4 py-4">
           {rooms.map((room) => (
             <Button
-              key={room.name}
+              key={room.id_habitacion} // Usar id_habitacion como key
               variant="outline"
               className={`justify-between ${
-                selectedRoom === room.name
+                selectedRoom === room.id_habitacion
                   ? "bg-[#01B6D1] text-white"
                   : "bg-white/20"
               } hover:bg-[#01B6D1] hover:text-white`}
-              onClick={() => setSelectedRoom(room.name)}
+              onClick={() => setSelectedRoom(room.id_habitacion)}
             >
-              <span>{room.name}</span>
+              <span>{room.habitacion}</span>
               <span>
-                Ocupadas: {room.occupiedBeds} | Libres:{" "}
-                {room.totalBeds - room.occupiedBeds}
+                Ocupadas: {room.ocupados} | Libres:{" "}
+                {parseInt(room.camas) - room.ocupados}
               </span>
             </Button>
           ))}
@@ -66,11 +69,21 @@ export function RoomSelectionDialog({
           <Button
             className="w-full bg-[#FFB81C] text-[#006184] hover:bg-[#FFB81C]/90"
             onClick={() => {
-              if (selectedRoom) {
-                onSelect(selectedRoom);
+              if (selectedRoom !== null) {
+                const roomData = rooms.find(
+                  (r) => r.id_habitacion === selectedRoom
+                );
+                if (roomData) {
+                  onSelect({
+                    id: roomData.id_habitacion,
+                    name: roomData.habitacion,
+                  });
+                }
+              } else {
+                onSelect(null);
               }
             }}
-            disabled={!selectedRoom}
+            disabled={selectedRoom === null}
           >
             Confirmar Selección
           </Button>
